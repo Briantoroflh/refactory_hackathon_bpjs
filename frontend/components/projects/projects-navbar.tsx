@@ -1,6 +1,11 @@
 "use client";
 
-import { BellIcon, HelpIcon, MenuIcon, PlusIcon, SearchIcon } from "./project-icons";
+import {
+  BellIcon,
+  HelpIcon,
+  SidebarToggleIcon,
+  SearchIcon,
+} from "@/components/dashboard/icons";
 
 type ProjectsNavbarProps = {
   query: string;
@@ -21,7 +26,7 @@ export function ProjectsNavbar({
         className="inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-slate-200 text-slate-600 lg:hidden"
         aria-label="Open sidebar"
       >
-        <MenuIcon className="h-5 w-5" />
+        <SidebarToggleIcon className="h-5 w-5" />
       </button>
 
       <div className="hidden w-full max-w-[clamp(220px,24vw,360px)] flex-1 items-center rounded-2xl border border-[#e5def7] bg-[#f4eefc] px-4 py-3 text-slate-400 shadow-[0_1px_0_rgba(15,23,42,0.02)] lg:flex">
@@ -35,16 +40,21 @@ export function ProjectsNavbar({
         />
       </div>
 
-      <button className="inline-flex h-11 items-center gap-2 rounded-xl bg-[#3f2fd6] px-4 text-[15px] font-semibold text-white shadow-[0_10px_24px_rgba(63,47,214,0.24)]">
-        <PlusIcon className="h-5 w-5" />
-        <span>New Project</span>
+      <button className="inline-flex h-11 items-center gap-2 rounded-2xl bg-[#4338ca] px-4 text-[15px] font-semibold text-white shadow-[0_10px_24px_rgba(67,56,202,0.24)] hover:bg-[#3f2fd6] transition">
+        <span>+ New Project</span>
       </button>
 
       <div className="ml-auto flex items-center gap-3">
-        <button className="hidden h-11 w-11 items-center justify-center rounded-2xl border border-slate-200 text-slate-600 sm:inline-flex" aria-label="Notifications">
+        <button
+          className="hidden h-11 w-11 items-center justify-center rounded-2xl border border-slate-200 text-slate-600 sm:inline-flex"
+          aria-label="Notifications"
+        >
           <BellIcon className="h-5 w-5" />
         </button>
-        <button className="hidden h-11 w-11 items-center justify-center rounded-2xl border border-slate-200 text-slate-600 sm:inline-flex" aria-label="Help">
+        <button
+          className="hidden h-11 w-11 items-center justify-center rounded-2xl border border-slate-200 text-slate-600 sm:inline-flex"
+          aria-label="Help"
+        >
           <HelpIcon className="h-5 w-5" />
         </button>
         <div className="h-11 w-11 rounded-full bg-[radial-gradient(circle_at_30%_30%,#d1a36d,#4b2f1f)] shadow-[0_8px_18px_rgba(15,23,42,0.2)]" />

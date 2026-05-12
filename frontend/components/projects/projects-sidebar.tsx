@@ -4,17 +4,18 @@ import type { ComponentType } from "react";
 import Link from "next/link";
 import { projectSidebarItems } from "@/lib/projects/mock-data";
 import {
-  AIIcon,
-  AnalyticsIcon,
-  DashboardIcon,
+  DashboardGlyph,
+  ProjectGlyph,
+  SprintGlyph,
+  TasksGlyph,
+  AnalyticsGlyph,
+  AIGlyph,
+  TeamGlyph,
+  SettingsGlyph,
   HelpIcon,
-  MenuIcon,
-  ProjectIcon,
-  SettingsIcon,
-  SprintIcon,
-  TeamIcon,
-  TasksIcon,
-} from "./project-icons";
+  SidebarToggleIcon,
+  LogoMarkIcon,
+} from "@/components/dashboard/icons";
 
 type ProjectsSidebarProps = {
   open: boolean;
@@ -22,14 +23,14 @@ type ProjectsSidebarProps = {
 };
 
 const iconMap: Record<string, ComponentType<{ className?: string }>> = {
-  dashboard: DashboardIcon,
-  project: ProjectIcon,
-  sprint: SprintIcon,
-  tasks: TasksIcon,
-  analytics: AnalyticsIcon,
-  ai: AIIcon,
-  team: TeamIcon,
-  settings: SettingsIcon,
+  dashboard: DashboardGlyph,
+  project: ProjectGlyph,
+  sprint: SprintGlyph,
+  tasks: TasksGlyph,
+  analytics: AnalyticsGlyph,
+  ai: AIGlyph,
+  team: TeamGlyph,
+  settings: SettingsGlyph,
 };
 
 export function ProjectsSidebar({ open, onClose }: ProjectsSidebarProps) {
@@ -49,12 +50,14 @@ export function ProjectsSidebar({ open, onClose }: ProjectsSidebarProps) {
       >
         <div className="flex h-full flex-col">
           <div className="flex items-center gap-3 px-1 py-2">
-            <div className="inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-[#4338ca] text-white">
-              <AIIcon className="h-5 w-5" />
-            </div>
+            <LogoMarkIcon className="h-10 w-10" />
             <div>
-              <p className="text-[18px] font-bold tracking-[-0.02em] text-[#4338ca]">Bloom</p>
-              <p className="text-sm font-medium text-slate-500">AI Productivity</p>
+              <p className="text-[18px] font-bold tracking-[-0.02em] text-[#4338ca]">
+                Bloom
+              </p>
+              <p className="text-sm font-medium text-slate-500">
+                AI Productivity
+              </p>
             </div>
           </div>
 
@@ -78,13 +81,19 @@ export function ProjectsSidebar({ open, onClose }: ProjectsSidebarProps) {
             })}
           </nav>
 
-          <div className="mt-auto space-y-3 border-t border-slate-300/70 pt-5">
-            <Link href="/support" className="flex items-center gap-3 rounded-2xl px-4 py-3 text-[15px] font-medium text-slate-600 hover:bg-white/70">
+          <div className="mt-auto space-y-3 border-t border-slate-200/70 pt-5">
+            <Link
+              href="/support"
+              className="flex items-center gap-3 rounded-2xl px-4 py-3 text-[15px] font-medium text-slate-600 hover:bg-white/70"
+            >
               <HelpIcon className="h-5 w-5" />
               <span>Support</span>
             </Link>
-            <Link href="/logout" className="flex items-center gap-3 rounded-2xl px-4 py-3 text-[15px] font-medium text-slate-600 hover:bg-white/70">
-              <MenuIcon className="h-5 w-5 rotate-180" />
+            <Link
+              href="/logout"
+              className="flex items-center gap-3 rounded-2xl px-4 py-3 text-[15px] font-medium text-slate-600 hover:bg-white/70"
+            >
+              <SidebarToggleIcon className="h-5 w-5 rotate-180" />
               <span>Sign Out</span>
             </Link>
           </div>

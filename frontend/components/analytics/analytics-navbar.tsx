@@ -7,19 +7,19 @@ import {
   SearchIcon,
 } from "@/components/dashboard/icons";
 
-type SprintNavbarProps = {
+type AnalyticsNavbarProps = {
   query: string;
-  breadcrumbs: string[];
+  sprintInfo: string;
   onOpenSidebar: () => void;
   onQueryChange: (value: string) => void;
 };
 
-export function SprintNavbar({
+export function AnalyticsNavbar({
   query,
-  breadcrumbs,
+  sprintInfo,
   onOpenSidebar,
   onQueryChange,
-}: SprintNavbarProps) {
+}: AnalyticsNavbarProps) {
   return (
     <header className="flex h-[82px] items-center gap-4 border-b border-slate-200 bg-white px-4 sm:px-6 lg:px-8">
       <button
@@ -32,25 +32,16 @@ export function SprintNavbar({
       </button>
 
       <div className="hidden items-center gap-2 text-[15px] font-semibold text-slate-500 md:flex">
-        {breadcrumbs.map((crumb, index) => (
-          <span key={crumb} className="inline-flex items-center gap-2">
-            {index ? <span className="text-slate-300">›</span> : null}
-            <span
-              className={
-                index === breadcrumbs.length - 1 ? "text-[#3f2fd6]" : ""
-              }
-            >
-              {crumb}
-            </span>
-          </span>
-        ))}
+        <span>Team Analytics</span>
+        <span className="text-slate-300">›</span>
+        <span className="text-[#3f2fd6]">{sprintInfo}</span>
       </div>
 
       <div className="ml-auto flex w-full max-w-[320px] items-center rounded-full border border-[#e5def7] bg-[#f3ecfc] px-4 py-2.5 text-slate-400">
         <SearchIcon className="h-5 w-5 shrink-0" />
         <input
-          aria-label="Search sprint tasks"
-          placeholder="Search issues, code..."
+          aria-label="Search analytics"
+          placeholder="Search analytics..."
           value={query}
           onChange={(event) => onQueryChange(event.target.value)}
           className="ml-3 w-full border-0 bg-transparent text-[15px] text-slate-700 placeholder:text-slate-400 focus:outline-none"
@@ -70,10 +61,14 @@ export function SprintNavbar({
         >
           <HelpIcon className="h-5 w-5" />
         </button>
-        <div className="inline-flex h-11 w-11 items-center justify-center rounded-full bg-[#2563eb] text-sm font-bold text-white">
-          JD
-        </div>
       </div>
+
+      <button
+        className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-slate-200 text-[12px] font-bold text-slate-600"
+        aria-label="User profile"
+      >
+        MC
+      </button>
     </header>
   );
 }
