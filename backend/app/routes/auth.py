@@ -50,19 +50,16 @@ async def refresh(req: TokenRefreshRequest):
     return await refresh_token(req)
 
 
+from app.routes.dependencies import require_auth
+from app.models.auth import User
+
 @router.get("/me", response_model=UserResponse)
 async def get_current_user(
-    token: str = Depends(lambda: ""),  # Will be replaced with actual dependency
-    db: AsyncSession = Depends(get_db)
+    current_user: User = Depends(require_auth)
 ):
     """
     Get current user profile
     
     Requires valid access token in Authorization header
     """
-    # This is a placeholder - actual implementation needs auth dependency
-    raise HTTPException(
-        status_code=status.HTTP_401_UNAUTHORIZED,
-        detail="Not authenticated",
-        headers={"WWW-Authenticate": "Bearer"},
-    )
+    return current_user

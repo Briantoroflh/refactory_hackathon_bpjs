@@ -2,6 +2,7 @@
 
 import dynamic from "next/dynamic";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { AppLayout } from "@/components/layout/app-layout";
 import { createTaskFromInput, moveTaskToStatus } from "@/lib/sprints/board";
 import { fetchSprintBoardData } from "@/lib/sprints/api";
 import { sprintBoardMockData } from "@/lib/sprints/mock-data";
@@ -14,8 +15,6 @@ import {
   groupTasksByStatus,
 } from "@/lib/sprints/selectors";
 import type { SprintBoardData, SprintFilterState, SprintTaskStatus } from "@/lib/sprints/types";
-import { SprintNavbar } from "./sprint-navbar";
-import { SprintSidebar } from "./sprint-sidebar";
 import { SprintSkeleton } from "./sprint-skeleton";
 
 // Lazy load heavy components
@@ -151,166 +150,163 @@ export function SprintPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#eef1f8] p-3 text-slate-900 sm:p-4">
-      <div className="mx-auto flex min-h-[calc(100vh-1.5rem)] w-full overflow-hidden rounded-[28px] border border-slate-200 bg-white shadow-[0_12px_38px_rgba(15,23,42,0.12)]">
-        <SprintSidebar
-          open={sidebarOpen}
-          onClose={() => setSidebarOpen(false)}
-          items={boardData.sidebarItems}
+    <AppLayout
+      title={boardData.sprint.name}
+      breadcrumbs={[
+        { label: "Sprints" },
+        { label: boardData.sprint.name }
+      ]}
+    >
+      <div className="space-y-6">
+        <SprintOverview
+          sprint={boardData.sprint}
+          progress={progress}
+          onOpenCreateTask={() => setShowTaskModal(true)}
+          onCreateSprint={() => {
+            setIsCreatingSprint(true);
+            setTimeout(() => setIsCreatingSprint(false), 700);
+          }}
         />
 
-        <div className="flex min-w-0 flex-1 flex-col">
-          <SprintNavbar
-            query={filters.query}
-            breadcrumbs={boardData.sprint.projectPath}
-            onOpenSidebar={() => setSidebarOpen(true)}
-            onQueryChange={(query) => setFilters((current) => ({ ...current, query }))}
-          />
+        <div className="grid gap-4 rounded-[24px] border border-slate-200 bg-white p-5 shadow-[0_12px_28px_rgba(15,23,42,0.05)] sm:grid-cols-2 lg:grid-cols-3">
+          <label className="space-y-1.5">
+            <span className="text-[11px] font-bold tracking-wider text-slate-500 uppercase px-1">
+              Filter by priority
+            </span>
+            <select
+              value={filters.priority}
+              onChange={(event) =>
+                setFilters((current) => ({
+                  ...current,
+                  priority: event.target.value as SprintFilterState["priority"],
+                }))
+              }
+              className="h-11 w-full rounded-2xl border border-slate-200 bg-slate-50/50 px-4 text-sm font-medium text-slate-700 focus:bg-white focus:ring-2 focus:ring-[#4338ca] transition-all"
+            >
+              <option value="all">All priorities</option>
+              <option value="low">Low</option>
+              <option value="medium">Medium</option>
+              <option value="high">High</option>
+              <option value="critical">Critical</option>
+            </select>
+          </label>
 
-          <main className="flex-1 overflow-y-auto bg-[#f8f9fd] px-4 py-5 sm:px-6 lg:px-8">
-            <SprintOverview
-              sprint={boardData.sprint}
-              progress={progress}
-              onOpenCreateTask={() => setShowTaskModal(true)}
-              onCreateSprint={() => {
-                setIsCreatingSprint(true);
-                setTimeout(() => setIsCreatingSprint(false), 700);
-              }}
-            />
+          <label className="space-y-1.5">
+            <span className="text-[11px] font-bold tracking-wider text-slate-500 uppercase px-1">
+              Filter by assignee
+            </span>
+            <select
+              value={filters.assigneeId}
+              onChange={(event) =>
+                setFilters((current) => ({
+                  ...current,
+                  assigneeId: event.target.value,
+                }))
+              }
+              className="h-11 w-full rounded-2xl border border-slate-200 bg-slate-50/50 px-4 text-sm font-medium text-slate-700 focus:bg-white focus:ring-2 focus:ring-[#4338ca] transition-all"
+            >
+              <option value="all">All members</option>
+              {boardData.members.map((member) => (
+                <option key={member.id} value={member.id}>
+                  {member.name}
+                </option>
+              ))}
+            </select>
+          </label>
 
-            <div className="mt-5 grid gap-3 rounded-2xl border border-[#dbe0ef] bg-white p-4 sm:grid-cols-2 lg:grid-cols-3">
-              <label className="space-y-1">
-                <span className="text-xs font-semibold tracking-wide text-slate-500 uppercase">
-                  Filter by priority
-                </span>
-                <select
-                  value={filters.priority}
-                  onChange={(event) =>
-                    setFilters((current) => ({
-                      ...current,
-                      priority: event.target.value as SprintFilterState["priority"],
-                    }))
-                  }
-                  className="h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-700"
-                >
-                  <option value="all">All priorities</option>
-                  <option value="low">Low</option>
-                  <option value="medium">Medium</option>
-                  <option value="high">High</option>
-                  <option value="critical">Critical</option>
-                </select>
-              </label>
+          <div className="flex items-end">
+            <button
+              type="button"
+              onClick={() => setFilters(defaultFilters)}
+              className="h-11 w-full sm:w-auto rounded-2xl border border-slate-200 px-6 text-sm font-bold text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition-all shadow-sm"
+            >
+              Reset Filters
+            </button>
+          </div>
+        </div>
 
-              <label className="space-y-1">
-                <span className="text-xs font-semibold tracking-wide text-slate-500 uppercase">
-                  Filter by assignee
-                </span>
-                <select
-                  value={filters.assigneeId}
-                  onChange={(event) =>
-                    setFilters((current) => ({
-                      ...current,
-                      assigneeId: event.target.value,
-                    }))
-                  }
-                  className="h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-700"
-                >
-                  <option value="all">All members</option>
-                  {boardData.members.map((member) => (
-                    <option key={member.id} value={member.id}>
-                      {member.name}
-                    </option>
-                  ))}
-                </select>
-              </label>
+        <div className="grid gap-6 2xl:grid-cols-[minmax(0,1fr)_340px]">
+          <section className="space-y-6">
+            <SprintStatCards stats={stats.length ? stats : boardData.stats} />
+            {filteredTasks.length ? (
+              <div className="bg-white rounded-[28px] border border-slate-200 p-2 shadow-[0_12px_28px_rgba(15,23,42,0.05)]">
+                <KanbanBoard
+                  tasksByStatus={tasksByStatus}
+                  membersMap={membersMap}
+                  onDropTask={onDropTask}
+                  onDragStart={setDraggingTaskId}
+                  onDragEnd={() => setDraggingTaskId(null)}
+                />
+              </div>
+            ) : (
+              <SprintEmptyState
+                title="No tasks found"
+                description="No sprint tasks match the current search and filter combination."
+              />
+            )}
+          </section>
 
-              <div className="flex items-end">
-                <button
-                  type="button"
-                  onClick={() => setFilters(defaultFilters)}
-                  className="h-10 rounded-xl border border-slate-200 px-4 text-sm font-semibold text-slate-600 hover:bg-slate-50"
-                >
-                  Reset Filters
+          <aside className="space-y-6">
+            <section className="rounded-[28px] border border-[#e0daf5] bg-[linear-gradient(180deg,#fbf9ff_0%,#f7f4ff_100%)] shadow-[0_12px_28px_rgba(15,23,42,0.05)] overflow-hidden">
+              <div className="border-b border-[#e5def7] px-6 py-5">
+                <div className="flex items-center gap-2">
+                  <span className="text-xl">✨</span>
+                  <h3 className="text-[20px] font-bold tracking-tight text-slate-800">
+                    AI Standup Insight
+                  </h3>
+                </div>
+                <p className="text-[13px] font-medium text-slate-500 mt-1">Synthesized 2 hours ago</p>
+              </div>
+              <div className="space-y-5 px-6 py-5 text-[15px] leading-relaxed text-slate-600 font-medium">
+                <p>
+                  The team is currently <span className="font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-lg border border-emerald-100">on track</span>{" "}
+                  to meet sprint goals.
+                </p>
+                <div className="rounded-[20px] bg-white border border-[#e5def7] p-4 shadow-sm">
+                  <p className="font-bold text-amber-600 flex items-center gap-2">
+                    <span className="h-2 w-2 rounded-full bg-amber-500 animate-pulse" />
+                    Review Delay Detected
+                  </p>
+                  <p className="text-[13px] text-slate-500 mt-1.5 font-medium">
+                    ENG-390 has been in review for 48 hours. Suggested pairing to expedite.
+                  </p>
+                </div>
+                <button className="w-full rounded-2xl bg-[#4338ca] px-4 py-3 text-[14px] font-bold text-white shadow-[0_10px_24px_rgba(67,56,202,0.2)] hover:bg-[#3f2fd6] transition-all">
+                  View Full Activity Log
                 </button>
               </div>
-            </div>
+            </section>
 
-            <div className="mt-6 grid gap-5 2xl:grid-cols-[minmax(0,1fr)_340px]">
-              <section className="space-y-5">
-                <SprintStatCards stats={stats.length ? stats : boardData.stats} />
-                {filteredTasks.length ? (
-                  <KanbanBoard
-                    tasksByStatus={tasksByStatus}
-                    membersMap={membersMap}
-                    onDropTask={onDropTask}
-                    onDragStart={setDraggingTaskId}
-                    onDragEnd={() => setDraggingTaskId(null)}
-                  />
-                ) : (
-                  <SprintEmptyState
-                    title="No tasks found"
-                    description="No sprint tasks match the current search and filter combination."
-                  />
-                )}
-              </section>
+            <section className="rounded-[28px] border border-slate-200 bg-white p-6 shadow-[0_12px_28px_rgba(15,23,42,0.05)]">
+              <h3 className="text-[22px] font-bold tracking-tight text-slate-800">Sprint Velocity</h3>
+              <div className="mt-5 grid grid-cols-4 text-center text-[12px] font-bold text-slate-400 uppercase tracking-widest px-1">
+                <span>S39</span>
+                <span>S40</span>
+                <span>S41</span>
+                <span className="text-[#4338ca]">S42</span>
+              </div>
+              <div className="mt-6 border-t border-slate-100 pt-5 flex items-center justify-between">
+                <span className="text-sm font-bold text-slate-500">Rolling Average</span>
+                <span className="text-[26px] font-bold text-slate-800 tracking-tight">82 pts</span>
+              </div>
+            </section>
 
-              <aside className="space-y-5">
-                <section className="rounded-3xl border border-[#ccd3ea] bg-white shadow-[0_8px_18px_rgba(15,23,42,0.06)]">
-                  <div className="border-b border-slate-200 px-5 py-4">
-                    <h3 className="text-[20px] font-semibold tracking-[-0.02em] text-slate-800">
-                      AI Standup Insight
-                    </h3>
-                    <p className="text-[15px] text-slate-500">Synthesized 2 hours ago</p>
-                  </div>
-                  <div className="space-y-4 px-5 py-4 text-[16px] text-slate-600">
-                    <p>
-                      The team is currently <span className="font-semibold text-emerald-500">on track</span>{" "}
-                      to meet sprint goals. A review bottleneck is detected in migration tasks.
-                    </p>
-                    <div className="rounded-xl bg-[#f8f9ff] p-3">
-                      <p className="font-semibold text-amber-600">Review Delay Detected</p>
-                      <p className="text-sm text-slate-500">
-                        ENG-390 has been in review for 48 hours. Suggested pairing to expedite.
-                      </p>
-                    </div>
-                    <button className="w-full rounded-xl bg-[#e9e8f4] px-4 py-2.5 text-[15px] font-semibold text-slate-700">
-                      View Full Activity Log
-                    </button>
-                  </div>
-                </section>
-
-                <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-[0_8px_18px_rgba(15,23,42,0.06)]">
-                  <h3 className="text-[30px] font-semibold tracking-[-0.02em] text-slate-800">Sprint Velocity</h3>
-                  <div className="mt-5 grid grid-cols-4 text-center text-sm font-semibold text-slate-500">
-                    <span>S39</span>
-                    <span>S40</span>
-                    <span>S41</span>
-                    <span className="text-[#4338ca]">S42</span>
-                  </div>
-                  <div className="mt-5 border-t border-slate-200 pt-4 text-sm font-semibold text-slate-500">
-                    Rolling Average
-                    <span className="float-right text-[23px] text-slate-800">82 pts</span>
-                  </div>
-                </section>
-
-                <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-[0_8px_18px_rgba(15,23,42,0.06)]">
-                  <h3 className="text-[30px] font-semibold tracking-[-0.02em] text-slate-800">Active Team</h3>
-                  <div className="mt-5 flex -space-x-3">
-                    {boardData.members.map((member) => (
-                      <span
-                        key={member.id}
-                        title={member.name}
-                        className="inline-flex h-10 w-10 items-center justify-center rounded-full border-2 border-white text-xs font-bold text-white"
-                        style={{ backgroundColor: member.color }}
-                      >
-                        {member.avatar}
-                      </span>
-                    ))}
-                  </div>
-                </section>
-              </aside>
-            </div>
-          </main>
+            <section className="rounded-[28px] border border-slate-200 bg-white p-6 shadow-[0_12px_28px_rgba(15,23,42,0.05)]">
+              <h3 className="text-[22px] font-bold tracking-tight text-slate-800">Active Team</h3>
+              <div className="mt-5 flex -space-x-3 px-1">
+                {boardData.members.map((member) => (
+                  <span
+                    key={member.id}
+                    title={member.name}
+                    className="inline-flex h-11 w-11 items-center justify-center rounded-full border-4 border-white text-[12px] font-bold text-white shadow-sm hover:-translate-y-1 transition-transform"
+                    style={{ backgroundColor: member.color }}
+                  >
+                    {member.avatar}
+                  </span>
+                ))}
+              </div>
+            </section>
+          </aside>
         </div>
       </div>
 
@@ -326,6 +322,6 @@ export function SprintPage() {
           Creating sprint...
         </div>
       ) : null}
-    </div>
+    </AppLayout>
   );
 }

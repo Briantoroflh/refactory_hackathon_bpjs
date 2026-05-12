@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
+import { Providers } from "@/components/providers";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -28,19 +29,9 @@ export default function RootLayout({
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">
-        {/* Realtime provider connects to backend WebSocket and provides subscribe() to pages */}
-        {/* Imported lazily as a client component */}
-        {/* @ts-ignore */}
-        {typeof window !== "undefined" ? (
-          // dynamic client-side provider
-          // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-          // @ts-ignore
-          require("@/lib/api/realtime").RealtimeProviderClient
-            ? React.createElement(require("@/lib/api/realtime").RealtimeProviderClient, null, children)
-            : children
-        ) : (
-          children
-        )}
+        <Providers>
+          {children}
+        </Providers>
       </body>
     </html>
   );

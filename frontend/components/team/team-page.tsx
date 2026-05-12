@@ -1,8 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { TeamNavbar } from "./team-navbar";
-import { TeamSidebar } from "./team-sidebar";
+import React, { useState } from "react";
+import { AppLayout } from "@/components/layout/app-layout";
 import type {
   TeamAccessControl,
   TeamMember,
@@ -22,7 +21,7 @@ function StatusBadge({ status }: { status: string }) {
   return (
     <span
       className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-[12px] font-semibold ${
-        variants[status as keyof typeof variants]
+        variants[status as keyof typeof variants] || ""
       }`}
     >
       <span className="h-1.5 w-1.5 rounded-full bg-current" />
@@ -40,7 +39,7 @@ function RoleBadge({ role }: { role: string }) {
   return (
     <span
       className={`inline-flex rounded-lg border px-2.5 py-1 text-[12px] font-semibold ${
-        variants[role as keyof typeof variants]
+        variants[role as keyof typeof variants] || ""
       }`}
     >
       {role}
@@ -67,40 +66,40 @@ function PermissionToggle({ enabled }: { enabled: boolean }) {
 
 function ActiveMembersTable({ members }: { members: TeamMember[] }) {
   return (
-    <div className="rounded-xl border border-slate-200 bg-white overflow-hidden">
+    <div className="rounded-[24px] border border-slate-200 bg-white overflow-hidden shadow-[0_12px_28px_rgba(15,23,42,0.05)]">
       <table className="w-full">
         <thead>
-          <tr className="border-b border-slate-200 bg-slate-50">
-            <th className="px-6 py-3 text-left text-[12px] font-semibold text-slate-600 uppercase tracking-wider">
+          <tr className="border-b border-slate-100 bg-slate-50/50">
+            <th className="px-6 py-4 text-left text-[12px] font-bold text-slate-500 uppercase tracking-widest">
               Name
             </th>
-            <th className="px-6 py-3 text-left text-[12px] font-semibold text-slate-600 uppercase tracking-wider">
+            <th className="px-6 py-4 text-left text-[12px] font-bold text-slate-500 uppercase tracking-widest">
               Role
             </th>
-            <th className="px-6 py-3 text-left text-[12px] font-semibold text-slate-600 uppercase tracking-wider">
+            <th className="px-6 py-4 text-left text-[12px] font-bold text-slate-500 uppercase tracking-widest">
               Status
             </th>
-            <th className="px-6 py-3 text-center text-[12px] font-semibold text-slate-600 uppercase tracking-wider">
+            <th className="px-6 py-4 text-center text-[12px] font-bold text-slate-500 uppercase tracking-widest">
               Actions
             </th>
           </tr>
         </thead>
-        <tbody>
-          {members.map((member, index) => (
+        <tbody className="divide-y divide-slate-50">
+          {members.map((member) => (
             <tr
               key={member.id}
-              className="border-b border-slate-100 last:border-b-0"
+              className="hover:bg-slate-50/50 transition-colors"
             >
               <td className="px-6 py-4">
                 <div className="flex items-center gap-3">
-                  <div className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-[#4338ca] text-white text-[12px] font-bold">
+                  <div className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-[#4338ca] to-[#6366f1] text-white text-[12px] font-bold shadow-sm">
                     {member.avatar}
                   </div>
                   <div>
-                    <div className="text-[14px] font-semibold text-slate-900">
+                    <div className="text-[14px] font-bold text-slate-900">
                       {member.name}
                     </div>
-                    <div className="text-[12px] text-slate-500">
+                    <div className="text-[12px] font-medium text-slate-500">
                       {member.email}
                     </div>
                   </div>
@@ -113,7 +112,7 @@ function ActiveMembersTable({ members }: { members: TeamMember[] }) {
                 <StatusBadge status={member.status} />
               </td>
               <td className="px-6 py-4 text-center">
-                <button className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100">
+                <button className="inline-flex h-9 w-9 items-center justify-center rounded-xl text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition">
                   ⋮
                 </button>
               </td>
@@ -121,8 +120,8 @@ function ActiveMembersTable({ members }: { members: TeamMember[] }) {
           ))}
         </tbody>
       </table>
-      <div className="border-t border-slate-100 bg-slate-50 px-6 py-3 text-[13px] text-slate-600">
-        Showing 1-3 of {members.length} members
+      <div className="border-t border-slate-50 bg-slate-50/50 px-6 py-4 text-[13px] font-medium text-slate-500">
+        Showing {members.length} members in workspace
       </div>
     </div>
   );
@@ -133,41 +132,37 @@ function ModulePermissionsCard({
 }: {
   permissions: ModulePermission[];
 }) {
-  const [permissionsState, setPermissionsState] = useState<
-    Record<string, ModulePermission>
-  >(permissions.reduce((acc, p) => ({ ...acc, [p.id]: p }), {}));
-
   return (
-    <div className="rounded-xl border border-slate-200 bg-white p-5">
-      <h3 className="text-[15px] font-semibold text-slate-900 mb-4">
+    <div className="rounded-[24px] border border-slate-200 bg-white p-6 shadow-[0_12px_28px_rgba(15,23,42,0.05)]">
+      <h3 className="text-[18px] font-bold text-slate-900 mb-2">
         Module Permissions
       </h3>
-      <p className="text-[13px] text-slate-600 mb-5">
-        Select a role to configure granular access across modules.
+      <p className="text-[14px] font-medium text-slate-500 mb-6">
+        Configure granular access across modules.
       </p>
 
       <div className="space-y-3">
         {permissions.map((perm) => (
           <div
             key={perm.id}
-            className="flex items-center justify-between rounded-lg border border-slate-100 bg-slate-50 p-3"
+            className="flex items-center justify-between rounded-2xl border border-slate-100 bg-slate-50/50 p-4 hover:bg-white hover:border-[#4338ca]/20 transition-all group"
           >
-            <span className="text-[14px] font-medium text-slate-800">
+            <span className="text-[14px] font-bold text-slate-700 group-hover:text-[#4338ca] transition-colors">
               {perm.name}
             </span>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-3">
+              <span className="text-[12px] font-bold text-slate-400 uppercase tracking-wider">Read</span>
               <PermissionToggle enabled={perm.read} />
-              <span className="text-[12px] text-slate-500">Read</span>
             </div>
           </div>
         ))}
       </div>
 
-      <div className="mt-5 flex gap-3">
-        <button className="flex-1 rounded-lg border border-slate-200 px-4 py-2.5 text-[14px] font-semibold text-slate-700 hover:bg-slate-50 transition">
+      <div className="mt-8 flex gap-3">
+        <button className="flex-1 rounded-2xl border border-slate-200 px-4 py-3 text-[14px] font-bold text-slate-600 hover:bg-slate-50 transition shadow-sm">
           Reset
         </button>
-        <button className="flex-1 rounded-lg bg-[#4338ca] px-4 py-2.5 text-[14px] font-semibold text-white hover:bg-[#3f2fd6] transition">
+        <button className="flex-1 rounded-2xl bg-[#4338ca] px-4 py-3 text-[14px] font-bold text-white hover:bg-[#3f2fd6] transition shadow-[0_10px_24px_rgba(67,56,202,0.2)]">
           Save Changes
         </button>
       </div>
@@ -176,73 +171,52 @@ function ModulePermissionsCard({
 }
 
 export function TeamPage({ accessControl }: TeamPageProps) {
-  const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [query, setQuery] = useState("");
-
   return (
-    <div className="flex h-screen bg-slate-50">
-      <TeamSidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+    <AppLayout title="Team Access Control">
+      <div className="space-y-6">
+        {/* Header Extra */}
+        <div className="flex items-start justify-between gap-4">
+          <p className="text-[16px] font-medium text-slate-500 max-w-md">
+            Manage member roles, permissions, and workspace security policies from a single dashboard.
+          </p>
+          <button className="inline-flex items-center gap-2 rounded-xl bg-[#4338ca] px-5 py-3 text-[14px] font-bold text-white hover:bg-[#3f2fd6] transition whitespace-nowrap shadow-[0_10px_24px_rgba(67,56,202,0.25)]">
+            👤 Invite Members
+          </button>
+        </div>
 
-      <div className="flex flex-1 flex-col overflow-hidden">
-        <TeamNavbar
-          query={query}
-          onOpenSidebar={() => setSidebarOpen(true)}
-          onQueryChange={setQuery}
-        />
-
-        <main className="flex-1 overflow-y-auto">
-          <div className="space-y-6 p-4 sm:p-6 lg:p-8">
-            {/* Header */}
-            <div className="flex items-start justify-between gap-4">
+        {/* Main Content */}
+        <div className="grid gap-6 lg:grid-cols-3">
+          {/* Active Members */}
+          <div className="lg:col-span-2">
+            <div className="mb-4 flex items-center justify-between px-1">
               <div>
-                <h1 className="text-[28px] font-bold text-slate-900">
-                  Team Access Control
-                </h1>
-                <p className="mt-1 text-[15px] text-slate-600">
-                  Manage member roles, permissions, and security policies.
-                </p>
+                <h2 className="text-[20px] font-bold tracking-tight text-slate-900">
+                  Active Members
+                </h2>
               </div>
-              <button className="inline-flex items-center gap-2 rounded-lg bg-[#4338ca] px-4 py-2.5 text-[14px] font-semibold text-white hover:bg-[#3f2fd6] transition whitespace-nowrap">
-                <span>👤</span>
-                Invite Members
-              </button>
-            </div>
-
-            {/* Main Content */}
-            <div className="grid gap-6 lg:grid-cols-3">
-              {/* Active Members */}
-              <div className="lg:col-span-2">
-                <div className="mb-4 flex items-center justify-between">
-                  <div>
-                    <h2 className="text-[18px] font-semibold text-slate-900">
-                      Active Members
-                    </h2>
-                    <p className="mt-1 text-[13px] text-slate-600">
-                      {accessControl.totalMembers} total members in workspace
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <button className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 hover:bg-slate-100">
-                      🔍
-                    </button>
-                    <button className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 hover:bg-slate-100">
-                      ⬇
-                    </button>
-                  </div>
-                </div>
-                <ActiveMembersTable members={accessControl.members} />
-              </div>
-
-              {/* Module Permissions */}
-              <div>
-                <ModulePermissionsCard
-                  permissions={accessControl.permissions}
-                />
+              <div className="flex items-center gap-2">
+                <button className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white hover:bg-slate-50 shadow-sm transition">
+                  🔍
+                </button>
+                <button className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white hover:bg-slate-50 shadow-sm transition">
+                  ⬇
+                </button>
               </div>
             </div>
+            <ActiveMembersTable members={accessControl.members} />
           </div>
-        </main>
+
+          {/* Module Permissions */}
+          <div>
+            <div className="mb-4 px-1">
+              <h2 className="text-[20px] font-bold tracking-tight text-slate-900">Permissions</h2>
+            </div>
+            <ModulePermissionsCard
+              permissions={accessControl.permissions}
+            />
+          </div>
+        </div>
       </div>
-    </div>
+    </AppLayout>
   );
 }

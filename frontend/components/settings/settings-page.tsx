@@ -1,8 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { SettingsNavbar } from "./settings-navbar";
-import { SettingsSidebar } from "./settings-sidebar";
+import { AppLayout } from "@/components/layout/app-layout";
 import type {
   SystemSettings,
   SettingsMenuItem,
@@ -111,9 +110,9 @@ function SyncPolicyToggle({
   );
 }
 
+
+
 export function SettingsPage({ settings }: SettingsPageProps) {
-  const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [query, setQuery] = useState("");
   const [activeMenu, setActiveMenu] = useState(
     settings.menus[0]?.id || "ia-integration",
   );
@@ -128,60 +127,52 @@ export function SettingsPage({ settings }: SettingsPageProps) {
   };
 
   return (
-    <div className="flex h-screen bg-slate-50">
-      <SettingsSidebar
-        open={sidebarOpen}
-        onClose={() => setSidebarOpen(false)}
-      />
+    <AppLayout title="System Settings" breadcrumbs={[{ label: "Configuration" }, { label: "System Settings" }]}>
+      <div className="space-y-8">
+        {/* Header Extra */}
+        <div>
+          <p className="text-[16px] font-medium text-slate-500">
+            Configure platform integrations, access controls, and administrative preferences.
+          </p>
+        </div>
 
-      <div className="flex flex-1 flex-col overflow-hidden">
-        <SettingsNavbar
-          query={query}
-          onOpenSidebar={() => setSidebarOpen(true)}
-          onQueryChange={setQuery}
+        {/* Settings Tabs */}
+        <SettingsMenu
+          menus={settings.menus}
+          activeMenu={activeMenu}
+          onSelectMenu={setActiveMenu}
         />
 
-        <main className="flex-1 overflow-y-auto">
-          <div className="space-y-6 p-4 sm:p-6 lg:p-8">
-            {/* Header */}
-            <div>
-              <h1 className="text-[28px] font-bold text-slate-900">
-                System Settings
-              </h1>
-              <p className="mt-1 text-[15px] text-slate-600">
-                Configure platform integrations, access controls, and
-                administrative preferences.
-              </p>
-            </div>
-
-            {/* Settings Tabs */}
-            <SettingsMenu
-              menus={settings.menus}
-              activeMenu={activeMenu}
-              onSelectMenu={setActiveMenu}
-            />
-
+        <div className="grid gap-8 lg:grid-cols-[1fr_340px]">
+          <div className="space-y-8">
             {/* Version Control Connections */}
-            <div>
-              <h2 className="text-[18px] font-semibold text-slate-900 mb-4">
-                Version Control Connections
-              </h2>
-              <p className="text-[14px] text-slate-600 mb-4">
-                Manage external repositories linked to Bloom workspaces.
-              </p>
-              <div className="grid gap-3 md:grid-cols-3">
+            <section>
+              <div className="mb-4">
+                <h2 className="text-[20px] font-bold tracking-tight text-slate-900">
+                  Version Control Connections
+                </h2>
+                <p className="text-[14px] font-medium text-slate-500 mt-1">
+                  Manage external repositories linked to Bloom workspaces.
+                </p>
+              </div>
+              <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
                 {settings.versionControls.map((vc) => (
                   <VersionControlCard key={vc.id} vc={vc} />
                 ))}
               </div>
-            </div>
+            </section>
 
             {/* Global Sync Policies */}
-            <div>
-              <h2 className="text-[18px] font-semibold text-slate-900 mb-4">
-                Global Sync Policies
-              </h2>
-              <div className="space-y-3 max-w-2xl">
+            <section>
+              <div className="mb-4">
+                <h2 className="text-[20px] font-bold tracking-tight text-slate-900">
+                  Global Sync Policies
+                </h2>
+                <p className="text-[14px] font-medium text-slate-500 mt-1">
+                  Define how data is synchronized across the platform.
+                </p>
+              </div>
+              <div className="space-y-3">
                 {syncPolicies.map((policy) => (
                   <SyncPolicyToggle
                     key={policy.id}
@@ -190,10 +181,40 @@ export function SettingsPage({ settings }: SettingsPageProps) {
                   />
                 ))}
               </div>
-            </div>
+            </section>
           </div>
-        </main>
+
+          {/* Sidebar Settings Info */}
+          <aside className="space-y-6">
+            <div className="rounded-[28px] border border-[#e0daf5] bg-[linear-gradient(180deg,#fbf9ff_0%,#f7f4ff_100%)] p-6 shadow-[0_12px_28px_rgba(15,23,42,0.05)]">
+              <h3 className="text-[18px] font-bold text-slate-900 mb-3">Sync Status</h3>
+              <div className="space-y-4">
+                <div className="flex items-center justify-between text-[14px]">
+                  <span className="font-medium text-slate-500">Last Global Sync</span>
+                  <span className="font-bold text-slate-800 text-right">2 mins ago</span>
+                </div>
+                <div className="flex items-center justify-between text-[14px]">
+                  <span className="font-medium text-slate-500">Next Scheduled</span>
+                  <span className="font-bold text-slate-800 text-right">In 28 mins</span>
+                </div>
+                <button className="w-full mt-2 rounded-xl bg-[#4338ca] px-4 py-3 text-[14px] font-bold text-white shadow-lg hover:bg-[#3f2fd6] transition-all">
+                  Force Global Sync
+                </button>
+              </div>
+            </div>
+
+            <div className="rounded-[28px] border border-slate-200 bg-white p-6 shadow-[0_12px_28px_rgba(15,23,42,0.05)]">
+              <h3 className="text-[18px] font-bold text-slate-900 mb-3">API Usage</h3>
+              <div className="mt-4 h-2 w-full rounded-full bg-slate-100 overflow-hidden">
+                <div className="h-full w-[65%] bg-[#4338ca] rounded-full" />
+              </div>
+              <p className="mt-3 text-[13px] font-medium text-slate-500">
+                You have used <span className="font-bold text-slate-800">65%</span> of your monthly API quota.
+              </p>
+            </div>
+          </aside>
+        </div>
       </div>
-    </div>
+    </AppLayout>
   );
 }

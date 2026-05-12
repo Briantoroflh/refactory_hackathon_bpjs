@@ -1,8 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { TasksNavbar } from "./tasks-navbar";
-import { TasksSidebar } from "./tasks-sidebar";
+import React from "react";
+import { AppLayout } from "@/components/layout/app-layout";
 import type { SprintTasks, TaskCard } from "@/lib/tasks/types";
 
 type TasksPageProps = {
@@ -17,8 +16,8 @@ function PriorityBadge({ priority }: { priority: string }) {
   };
   return (
     <span
-      className={`inline-flex rounded border px-2 py-0.5 text-[11px] font-semibold capitalize border ${
-        variants[priority as keyof typeof variants]
+      className={`inline-flex rounded border px-2 py-0.5 text-[11px] font-semibold capitalize ${
+        variants[priority as keyof typeof variants] || "bg-slate-50 text-slate-700 border-slate-200"
       }`}
     >
       {priority}
@@ -30,47 +29,51 @@ function ProgressBar({ progress }: { progress: number }) {
   return (
     <div className="h-1.5 w-full rounded-full bg-slate-200 overflow-hidden">
       <div
-        className="h-full bg-blue-500 rounded-full transition-all"
+        className="h-full bg-[#4338ca] rounded-full transition-all"
         style={{ width: `${progress}%` }}
       />
     </div>
   );
 }
 
-function TaskCard({ card }: { card: TaskCard }) {
+function TaskCardItem({ card }: { card: TaskCard }) {
   return (
-    <div className="rounded-lg border border-slate-200 bg-white p-3 shadow-sm hover:shadow-md transition cursor-grab active:cursor-grabbing">
-      <div className="flex items-start justify-between gap-2 mb-2">
-        <span className="text-[11px] font-semibold text-slate-500 uppercase bg-slate-100 px-1.5 py-0.5 rounded">
+    <div className="rounded-[20px] border border-slate-200 bg-white p-4 shadow-[0_4px_12px_rgba(15,23,42,0.03)] hover:shadow-[0_8px_24px_rgba(15,23,42,0.08)] transition-all cursor-grab active:cursor-grabbing group">
+      <div className="flex items-start justify-between gap-2 mb-3">
+        <span className="text-[11px] font-bold text-slate-500 uppercase bg-slate-100 px-2 py-0.5 rounded-lg">
           {card.label}
         </span>
         <PriorityBadge priority={card.priority} />
       </div>
 
-      <h3 className="text-[13px] font-semibold text-slate-900 mb-2 leading-snug">
+      <h3 className="text-[14px] font-bold text-slate-900 mb-2 leading-snug group-hover:text-[#4338ca] transition-colors">
         {card.title}
       </h3>
 
       {card.description && (
-        <p className="text-[12px] text-slate-600 mb-3">{card.description}</p>
+        <p className="text-[13px] text-slate-600 mb-4 line-clamp-2">{card.description}</p>
       )}
 
       {card.progress !== undefined && (
-        <div className="mb-3">
+        <div className="mb-4">
+          <div className="flex items-center justify-between mb-1.5">
+            <span className="text-[11px] font-bold text-slate-500">Progress</span>
+            <span className="text-[11px] font-bold text-[#4338ca]">{card.progress}%</span>
+          </div>
           <ProgressBar progress={card.progress} />
-          <span className="text-[11px] text-slate-500 mt-1 inline-block">
-            {card.progress}%
-          </span>
         </div>
       )}
 
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between mt-auto pt-2 border-t border-slate-50">
         {card.assignee && (
-          <div className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-[#4338ca] text-white text-[10px] font-bold">
-            {card.assignee.avatar}
+          <div className="flex items-center gap-2">
+            <div className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-gradient-to-br from-[#4338ca] to-[#6366f1] text-white text-[11px] font-bold shadow-sm">
+              {card.assignee.avatar}
+            </div>
+            <span className="text-[12px] font-medium text-slate-700">{card.assignee.name}</span>
           </div>
         )}
-        <button className="text-slate-400 hover:text-slate-600">⋮</button>
+        <button className="h-8 w-8 inline-flex items-center justify-center rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition">⋮</button>
       </div>
     </div>
   );
@@ -86,82 +89,67 @@ function KanbanColumn({
   cards: TaskCard[];
 }) {
   return (
-    <div className="flex flex-col w-full sm:w-80 bg-slate-50 rounded-lg p-4 border border-slate-200">
+    <div className="flex flex-col w-[320px] bg-[#f1f3f9]/50 rounded-[24px] p-4 border border-slate-200/60 h-full">
       {/* Column Header */}
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-2">
-          <h3 className="text-[14px] font-semibold text-slate-900">{title}</h3>
-          <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-slate-200 text-[11px] font-bold text-slate-700">
+      <div className="flex items-center justify-between mb-5 px-1">
+        <div className="flex items-center gap-2.5">
+          <h3 className="text-[16px] font-bold text-slate-800">{title}</h3>
+          <span className="inline-flex h-6 w-6 items-center justify-center rounded-xl bg-white border border-slate-200 text-[12px] font-bold text-[#4338ca] shadow-sm">
             {count}
           </span>
         </div>
-        <button className="text-slate-400 hover:text-slate-600">⊕</button>
+        <button className="h-8 w-8 inline-flex items-center justify-center rounded-xl text-slate-400 hover:bg-white hover:text-[#4338ca] hover:border-slate-200 border border-transparent transition">⊕</button>
       </div>
 
       {/* Cards */}
-      <div className="flex-1 space-y-2 overflow-y-auto">
+      <div className="flex-1 space-y-4 overflow-y-auto pr-1 custom-scrollbar">
         {cards.map((card) => (
-          <TaskCard key={card.id} card={card} />
+          <TaskCardItem key={card.id} card={card} />
         ))}
+        <button className="w-full py-3 rounded-2xl border-2 border-dashed border-slate-200 text-slate-400 text-[13px] font-bold hover:border-[#4338ca] hover:text-[#4338ca] hover:bg-white transition-all">
+          + Add Task
+        </button>
       </div>
     </div>
   );
 }
 
 export function TasksPage({ tasks }: TasksPageProps) {
-  const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [query, setQuery] = useState("");
-
   return (
-    <div className="flex h-screen bg-slate-50">
-      <TasksSidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
-
-      <div className="flex flex-1 flex-col overflow-hidden">
-        <TasksNavbar
-          query={query}
-          onOpenSidebar={() => setSidebarOpen(true)}
-          onQueryChange={setQuery}
-        />
-
-        <main className="flex-1 overflow-hidden">
-          <div className="h-full flex flex-col p-4 sm:p-6 lg:p-8">
-            {/* Header */}
-            <div className="mb-6 flex flex-col gap-4">
-              <div>
-                <h1 className="text-[28px] font-bold text-slate-900">
-                  Sprint {tasks.sprintNumber}: {tasks.sprintTitle}
-                </h1>
-                <div className="mt-2 flex flex-wrap items-center gap-4 text-[14px] text-slate-600">
-                  <span>📅 {tasks.dateRange}</span>
-                  <a
-                    href="#"
-                    className="flex items-center gap-1.5 text-[#4338ca] hover:underline"
-                  >
-                    🔗 {tasks.repositoryLink}
-                  </a>
-                </div>
-              </div>
-              <button className="inline-flex w-fit items-center gap-2 rounded-lg bg-[#4338ca] px-4 py-2.5 text-[14px] font-semibold text-white hover:bg-[#3f2fd6] transition">
-                💬 AI Generate Kanban
-              </button>
-            </div>
-
-            {/* Kanban Board */}
-            <div className="flex-1 overflow-x-auto">
-              <div className="flex gap-4 pb-4 min-w-min">
-                {tasks.columns.map((column) => (
-                  <KanbanColumn
-                    key={column.id}
-                    title={column.title}
-                    count={column.count}
-                    cards={column.cards}
-                  />
-                ))}
-              </div>
-            </div>
+    <AppLayout title={`Sprint ${tasks.sprintNumber}: ${tasks.sprintTitle}`}>
+      <div className="h-full flex flex-col space-y-6">
+        {/* Header Extra Info */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="flex flex-wrap items-center gap-4 text-[14px] font-medium text-slate-500">
+            <span className="flex items-center gap-2 bg-white px-3 py-1.5 rounded-xl border border-slate-200 shadow-sm">
+              📅 {tasks.dateRange}
+            </span>
+            <a
+              href="#"
+              className="flex items-center gap-2 text-[#4338ca] hover:bg-[#4338ca] hover:text-white transition-colors bg-white px-3 py-1.5 rounded-xl border border-slate-200 shadow-sm font-bold"
+            >
+              🔗 {tasks.repositoryLink}
+            </a>
           </div>
-        </main>
+          <button className="inline-flex items-center gap-2 rounded-xl bg-[#4338ca] px-5 py-2.5 text-[14px] font-bold text-white hover:bg-[#3f2fd6] transition shadow-[0_10px_24px_rgba(67,56,202,0.25)]">
+            ✨ AI Generate Kanban
+          </button>
+        </div>
+
+        {/* Kanban Board */}
+        <div className="flex-1 overflow-x-auto min-h-0">
+          <div className="flex gap-6 pb-6 min-w-max h-full">
+            {tasks.columns.map((column) => (
+              <KanbanColumn
+                key={column.id}
+                title={column.title}
+                count={column.count}
+                cards={column.cards}
+              />
+            ))}
+          </div>
+        </div>
       </div>
-    </div>
+    </AppLayout>
   );
 }

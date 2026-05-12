@@ -26,61 +26,33 @@ import {
 import type { DashboardOverview, NotificationItem, StatCard } from "@/lib/dashboard/types";
 import { dashboardNavItems } from "@/lib/dashboard/mock-data";
 
+import { AppLayout } from "@/components/layout/app-layout";
+
 type DashboardShellProps = {
   overview: DashboardOverview;
 };
 
 export function DashboardShell({ overview }: DashboardShellProps) {
-  const [sidebarOpen, setSidebarOpen] = useState(false);
-
-  const navIcons = useMemo(
-    () => ({
-      dashboard: DashboardGlyph,
-      project: ProjectGlyph,
-      sprint: SprintGlyph,
-      tasks: TasksGlyph,
-      analytics: AnalyticsGlyph,
-      ai: AIGlyph,
-      team: TeamGlyph,
-      settings: SettingsGlyph,
-    }),
-    [],
-  );
-
   return (
-    <div className="min-h-screen bg-[#f3f5fb] text-slate-900">
-      <div className="mx-auto flex min-h-screen w-full flex-col overflow-hidden bg-white lg:rounded-none xl:my-4 xl:rounded-[24px] xl:border xl:border-slate-200 xl:shadow-[0_10px_40px_rgba(15,23,42,0.08)]">
-        <div className="flex flex-1 overflow-hidden">
-          <Sidebar
-            open={sidebarOpen}
-            onClose={() => setSidebarOpen(false)}
-            navIcons={navIcons}
-          />
-          <div className="flex min-w-0 flex-1 flex-col">
-            <Topbar onMenuClick={() => setSidebarOpen(true)} />
-            <main className="flex-1 overflow-y-auto bg-[#f8f9fd] px-4 py-4 sm:px-6 sm:py-6 lg:px-8 lg:py-7">
-              <div className="grid gap-6 lg:grid-cols-[minmax(0,1.55fr)_minmax(300px,0.9fr)]">
-                <section className="space-y-6">
-                  <StatsGrid stats={overview.stats} />
-                  <div className="grid gap-6 lg:grid-cols-[minmax(0,1.6fr)_minmax(280px,0.75fr)]">
-                    <SprintChartCard
-                      title={overview.sprint.title}
-                      subtitle={overview.sprint.subtitle}
-                      bars={overview.sprint.bars}
-                    />
-                    <NotificationsPanel notifications={overview.notifications} />
-                  </div>
-                </section>
-                <aside className="space-y-6">
-                  <ProfileCard />
-                  <AIModulePanel />
-                </aside>
-              </div>
-            </main>
+    <AppLayout title="Dashboard Overview">
+      <div className="grid gap-6 lg:grid-cols-[minmax(0,1.55fr)_minmax(300px,0.9fr)]">
+        <section className="space-y-6">
+          <StatsGrid stats={overview.stats} />
+          <div className="grid gap-6 lg:grid-cols-[minmax(0,1.6fr)_minmax(280px,0.75fr)]">
+            <SprintChartCard
+              title={overview.sprint.title}
+              subtitle={overview.sprint.subtitle}
+              bars={overview.sprint.bars}
+            />
+            <NotificationsPanel notifications={overview.notifications} />
           </div>
-        </div>
+        </section>
+        <aside className="space-y-6">
+          <ProfileCard />
+          <AIModulePanel />
+        </aside>
       </div>
-    </div>
+    </AppLayout>
   );
 }
 

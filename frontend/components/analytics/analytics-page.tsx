@@ -1,8 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { AnalyticsNavbar } from "./analytics-navbar";
-import { AnalyticsSidebar } from "./analytics-sidebar";
+import { AppLayout } from "@/components/layout/app-layout";
 import type {
   TeamAnalytics,
   EngineerPerformance,
@@ -149,100 +148,80 @@ function AIInsightCard({ insight }: { insight: AIInsight }) {
 }
 
 export function AnalyticsPage({ analytics }: AnalyticsPageProps) {
-  const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [query, setQuery] = useState("");
-
   const sprintInfo = `Sprint ${analytics.sprintNumber} • ${analytics.quarter} ${analytics.year} Analytics`;
+  const breadcrumbs = [
+    { label: "Team Analytics" },
+    { label: sprintInfo }
+  ];
 
   return (
-    <div className="layout-shell">
-      <AnalyticsSidebar
-        open={sidebarOpen}
-        onClose={() => setSidebarOpen(false)}
-      />
+    <AppLayout title="Team Performance" breadcrumbs={breadcrumbs}>
+      <div className="space-y-6">
+        {/* Sprint Info / Header Extra */}
+        <div className="flex items-center justify-between gap-4 -mt-2 mb-2">
+          <p className="text-[16px] font-medium text-slate-500">{sprintInfo}</p>
+          <button className="inline-flex items-center gap-2 rounded-xl bg-[#4338ca] px-6 py-3 text-[14px] font-bold text-white hover:bg-[#3f2fd6] transition shadow-[0_10px_24px_rgba(67,56,202,0.25)]">
+            Export
+          </button>
+        </div>
 
-      <div className="flex flex-1 flex-col overflow-hidden">
-        <AnalyticsNavbar
-          query={query}
-          sprintInfo={sprintInfo}
-          onOpenSidebar={() => setSidebarOpen(true)}
-          onQueryChange={setQuery}
-        />
-
-        <main className="layout-main">
-          <div className="layout-content space-y-6">
-            {/* Header */}
-            <div className="flex items-center justify-between gap-4">
-              <div>
-                <h1 className="text-[28px] font-bold text-slate-900">
-                  Team Performance
-                </h1>
-                <p className="mt-1 text-[15px] text-slate-500">{sprintInfo}</p>
+        {/* Team Velocity Card */}
+        <div className="rounded-[24px] border border-slate-200 bg-white p-6 shadow-[0_12px_28px_rgba(15,23,42,0.05)]">
+          <div className="flex items-start justify-between">
+            <div>
+              <h2 className="text-[15px] font-semibold text-slate-500 uppercase tracking-wider">
+                Team Velocity
+              </h2>
+              <div className="mt-3 flex items-baseline gap-2">
+                <div className="text-5xl font-bold tracking-tight text-slate-900">
+                  {analytics.teamVelocity.current}
+                </div>
+                <div className="text-[15px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-lg border border-emerald-100">
+                  ↑ {analytics.teamVelocity.trend}%
+                </div>
               </div>
-              <button className="inline-flex items-center gap-2 rounded-lg bg-[#4338ca] px-4 py-2.5 text-[14px] font-semibold text-white hover:bg-[#3f2fd6] transition">
-                Export
-              </button>
+              <p className="mt-3 text-[14px] font-medium text-slate-600">
+                {analytics.teamVelocity.completedPoints} story points
+                completed this sprint
+              </p>
             </div>
-
-            {/* Team Velocity Card */}
-            <div className="rounded-xl border border-slate-200 bg-white p-6">
-              <div className="flex items-start justify-between">
-                <div>
-                  <h2 className="text-[15px] font-semibold text-slate-500 uppercase tracking-wider">
-                    Team Velocity
-                  </h2>
-                  <div className="mt-3 flex items-baseline gap-2">
-                    <div className="text-5xl font-bold text-slate-900">
-                      {analytics.teamVelocity.current}
-                    </div>
-                    <div className="text-[14px] font-medium text-emerald-600">
-                      ↑ {analytics.teamVelocity.trend}%
-                    </div>
-                  </div>
-                  <p className="mt-2 text-[14px] text-slate-600">
-                    {analytics.teamVelocity.completedPoints} story points
-                    completed this sprint
-                  </p>
-                </div>
-                <div className="inline-flex h-12 w-12 items-center justify-center rounded-full bg-[#f3ecfc] text-[#4338ca]">
-                  📈
-                </div>
-              </div>
-            </div>
-
-            {/* Main Content */}
-            <div className="grid gap-6 lg:grid-cols-3">
-              {/* Engineer Performance */}
-              <div className="lg:col-span-2">
-                <div className="mb-4 flex items-center justify-between">
-                  <h2 className="text-[18px] font-semibold text-slate-900">
-                    Engineer Performance
-                  </h2>
-                  <button className="text-[14px] font-medium text-[#4338ca] hover:underline">
-                    View All →
-                  </button>
-                </div>
-                <EngineerTable engineers={analytics.engineers} />
-              </div>
-
-              {/* AI Insights */}
-              <div>
-                <div className="mb-4 flex items-center gap-2">
-                  <span>✨</span>
-                  <h2 className="text-[18px] font-semibold text-slate-900">
-                    AI Insights
-                  </h2>
-                </div>
-                <div className="space-y-3">
-                  {analytics.insights.map((insight) => (
-                    <AIInsightCard key={insight.id} insight={insight} />
-                  ))}
-                </div>
-              </div>
+            <div className="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-[#f3ecfc] text-[#4338ca] shadow-[0_8px_16px_rgba(67,56,202,0.1)]">
+              📈
             </div>
           </div>
-        </main>
+        </div>
+
+        {/* Main Content */}
+        <div className="grid gap-6 lg:grid-cols-3">
+          {/* Engineer Performance */}
+          <div className="lg:col-span-2">
+            <div className="mb-4 flex items-center justify-between">
+              <h2 className="text-[20px] font-bold tracking-tight text-slate-900">
+                Engineer Performance
+              </h2>
+              <button className="text-[14px] font-semibold text-[#4338ca] hover:underline">
+                View All →
+              </button>
+            </div>
+            <EngineerTable engineers={analytics.engineers} />
+          </div>
+
+          {/* AI Insights */}
+          <div>
+            <div className="mb-4 flex items-center gap-2">
+              <span className="text-xl">✨</span>
+              <h2 className="text-[20px] font-bold tracking-tight text-slate-900">
+                AI Insights
+              </h2>
+            </div>
+            <div className="space-y-4">
+              {analytics.insights.map((insight) => (
+                <AIInsightCard key={insight.id} insight={insight} />
+              ))}
+            </div>
+          </div>
+        </div>
       </div>
-    </div>
+    </AppLayout>
   );
 }

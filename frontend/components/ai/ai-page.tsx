@@ -1,14 +1,7 @@
 "use client";
 
-import {
-  useState,
-  useCallback,
-  useRef,
-  useEffect,
-  type RefObject,
-} from "react";
-import { AISidebar } from "./ai-sidebar";
-import { AINavbar } from "./ai-navbar";
+import React, { useState, useCallback, useRef, useEffect } from "react";
+import { AppLayout } from "@/components/layout/app-layout";
 import { AIContextPanel } from "./ai-context-panel";
 import { AIChatPanel } from "./ai-chat-panel";
 import type { AIMessage, AIDocument, AIContextItem } from "@/lib/ai/types";
@@ -69,16 +62,9 @@ const newAccessToken = generateAccessToken(user_id);`,
       language: "typescript",
     },
   },
-  {
-    id: "msg-4",
-    type: "user",
-    content:
-      "Ask the AI Assistant to review code, generate summaries, or analyze blockers...",
-  },
 ];
 
 export function AIPage() {
-  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [messages, setMessages] = useState<AIMessage[]>(mockMessages);
   const [inputValue, setInputValue] = useState("");
   const chatEndRef = useRef<HTMLDivElement>(null);
@@ -116,33 +102,27 @@ export function AIPage() {
   }, [inputValue]);
 
   return (
-    <div className="min-h-screen bg-[#f3f5fb] text-slate-900">
-      <div className="mx-auto flex min-h-screen w-full flex-col overflow-hidden bg-white lg:rounded-none xl:my-4 xl:rounded-[24px] xl:border xl:border-slate-200 xl:shadow-[0_10px_40px_rgba(15,23,42,0.08)]">
-        <div className="flex flex-1 overflow-hidden">
-          <AISidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
-          <div className="flex min-w-0 flex-1 flex-col">
-            <AINavbar onMenuClick={() => setSidebarOpen(true)} />
-            <main className="flex-1 overflow-hidden bg-[#f8f9fd] px-4 sm:px-6 lg:px-8">
-              <div className="grid h-full gap-6 lg:grid-cols-[minmax(0,1fr)_340px]">
-                {/* Chat Panel */}
-                <AIChatPanel
-                  messages={messages}
-                  onSendMessage={handleSendMessage}
-                  inputValue={inputValue}
-                  onInputChange={setInputValue}
-                  chatEndRef={chatEndRef}
-                />
+    <AppLayout title="AI Assistant">
+      <div className="grid h-full gap-6 lg:grid-cols-[minmax(0,1fr)_340px]">
+        {/* Chat Panel */}
+        <div className="bg-white rounded-[28px] border border-slate-200 shadow-[0_12px_28px_rgba(15,23,42,0.05)] overflow-hidden flex flex-col h-[calc(100vh-180px)]">
+          <AIChatPanel
+            messages={messages}
+            onSendMessage={handleSendMessage}
+            inputValue={inputValue}
+            onInputChange={setInputValue}
+            chatEndRef={chatEndRef}
+          />
+        </div>
 
-                {/* Context Panel */}
-                <AIContextPanel
-                  documents={mockDocuments}
-                  contextItems={mockContextItems}
-                />
-              </div>
-            </main>
-          </div>
+        {/* Context Panel */}
+        <div className="space-y-6 overflow-y-auto">
+          <AIContextPanel
+            documents={mockDocuments}
+            contextItems={mockContextItems}
+          />
         </div>
       </div>
-    </div>
+    </AppLayout>
   );
 }
