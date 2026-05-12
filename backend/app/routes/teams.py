@@ -3,13 +3,23 @@ Team and organization management routes
 """
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.future import select
-from sqlalchemy import and_
 from typing import List, Optional
-from app.models import Team, TeamMember, TeamWorkspace, Division, Category, Worker
 from app.databases import get_db
 from app.services.schemas import TeamResponse, WorkerResponse
-from datetime import datetime, timezone
+from app.controllers.teams import (
+    add_team_member as controller_add_team_member,
+    create_category as controller_create_category,
+    create_division as controller_create_division,
+    create_team as controller_create_team,
+    get_my_teams as controller_get_my_teams,
+    get_team as controller_get_team,
+    get_team_members as controller_get_team_members,
+    list_categories as controller_list_categories,
+    list_divisions as controller_list_divisions,
+    list_teams as controller_list_teams,
+    remove_team_member as controller_remove_team_member,
+    update_team as controller_update_team,
+)
 
 router = APIRouter(prefix="/teams", tags=["teams"])
 
@@ -39,28 +49,7 @@ async def create_team(
     - **description**: Team description
     - **capacity_hours**: Team capacity (default 160 hours)
     """
-    # Verify category exists
-    stmt = select(Category).where(Category.category_id == category_id)
-    result = await db.execute(stmt)
-    if not result.scalar_one_or_none():
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Category not found"
-        )
-    
-    team = Team(
-        name=name,
-        category_id=category_id,
-        description=description,
-        capacity_hours=capacity_hours,
-        status="active",
-    )
-    
-    db.add(team)
-    await db.commit()
-    await db.refresh(team)
-    
-    return team
+    return await controller_create_team(name, category_id, description, capacity_hours, db)
 
 
 @router.get("", response_model=List[TeamResponse])
@@ -80,19 +69,7 @@ async def list_teams(
     - **category_id**: Filter by category
     - **status**: Filter by status (active, inactive, archived)
     """
-    stmt = select(Team)
-    
-    if category_id:
-        stmt = stmt.where(Team.category_id == category_id)
-    if status:
-        stmt = stmt.where(Team.status == status)
-    
-    stmt = stmt.offset(skip).limit(limit)
-    
-    result = await db.execute(stmt)
-    teams = result.scalars().all()
-    
-    return teams
+    return await controller_list_teams(db, skip, limit, category_id, status)
 
 
 @router.get("/{team_id}", response_model=TeamResponse)
@@ -102,17 +79,7 @@ async def get_team(
     _: None = Depends(require_auth),
 ):
     """Get team by ID"""
-    stmt = select(Team).where(Team.team_id == team_id)
-    result = await db.execute(stmt)
-    team = result.scalar_one_or_none()
-    
-    if not team:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Team not found"
-        )
-    
-    return team
+    return await controller_get_team(team_id, db)
 
 
 @router.put("/{team_id}", response_model=TeamResponse)
@@ -134,31 +101,7 @@ async def update_team(
     - **capacity_hours**: New capacity
     - **status**: New status
     """
-    stmt = select(Team).where(Team.team_id == team_id)
-    result = await db.execute(stmt)
-    team = result.scalar_one_or_none()
-    
-    if not team:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Team not found"
-        )
-    
-    if name:
-        team.name = name
-    if description is not None:
-        team.description = description
-    if capacity_hours:
-        team.capacity_hours = capacity_hours
-    if status:
-        team.status = status
-    
-    team.updated_at = datetime.now(timezone.utc)
-    
-    await db.commit()
-    await db.refresh(team)
-    
-    return team
+    return await controller_update_team(team_id, name, description, capacity_hours, status, db)
 
 
 @router.post("/{team_id}/members")
@@ -176,46 +119,7 @@ async def add_team_member(
     - **worker_id**: Worker ID to add
     - **role**: Member role (e.g., 'member', 'lead', 'manager')
     """
-    # Verify team exists
-    stmt = select(Team).where(Team.team_id == team_id)
-    result = await db.execute(stmt)
-    if not result.scalar_one_or_none():
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Team not found"
-        )
-    
-    # Verify worker exists
-    stmt = select(Worker).where(Worker.worker_id == worker_id)
-    result = await db.execute(stmt)
-    if not result.scalar_one_or_none():
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Worker not found"
-        )
-    
-    # Check if already member
-    stmt = select(TeamMember).where(
-        and_(TeamMember.team_id == team_id, TeamMember.worker_id == worker_id)
-    )
-    result = await db.execute(stmt)
-    if result.scalar_one_or_none():
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Worker is already a member of this team"
-        )
-    
-    member = TeamMember(
-        team_id=team_id,
-        worker_id=worker_id,
-        role=role,
-        join_date=datetime.now(timezone.utc),
-    )
-    
-    db.add(member)
-    await db.commit()
-    
-    return {"message": "Member added to team successfully"}
+    return await controller_add_team_member(team_id, worker_id, role, db)
 
 
 @router.delete("/{team_id}/members/{member_id}")
@@ -231,22 +135,7 @@ async def remove_team_member(
     - **team_id**: Team ID
     - **member_id**: Team member ID to remove
     """
-    stmt = select(TeamMember).where(
-        and_(TeamMember.team_member_id == member_id, TeamMember.team_id == team_id)
-    )
-    result = await db.execute(stmt)
-    member = result.scalar_one_or_none()
-    
-    if not member:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Team member not found"
-        )
-    
-    await db.delete(member)
-    await db.commit()
-    
-    return {"message": "Member removed from team successfully"}
+    return await controller_remove_team_member(team_id, member_id, db)
 
 
 @router.get("/{team_id}/members")
@@ -260,11 +149,7 @@ async def get_team_members(
     
     - **team_id**: Team ID
     """
-    stmt = select(TeamMember).where(TeamMember.team_id == team_id)
-    result = await db.execute(stmt)
-    members = result.scalars().all()
-    
-    return {"team_id": team_id, "members": members}
+    return await controller_get_team_members(team_id, db)
 
 
 @router.get("/my-teams")
@@ -277,8 +162,7 @@ async def get_my_teams(
     
     TODO: Filter by current user from JWT token
     """
-    # Placeholder - needs current user context
-    return {"teams": []}
+    return await controller_get_my_teams()
 
 
 # Division endpoints
@@ -298,21 +182,7 @@ async def create_division(
     - **name**: Division name
     - **description**: Division description
     """
-    # Check for duplicate
-    stmt = select(Division).where(Division.name == name)
-    result = await db.execute(stmt)
-    if result.scalar_one_or_none():
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Division with this name already exists"
-        )
-    
-    division = Division(name=name, description=description)
-    db.add(division)
-    await db.commit()
-    await db.refresh(division)
-    
-    return division
+    return await controller_create_division(name, description, db)
 
 
 @divisions_router.get("")
@@ -321,11 +191,7 @@ async def list_divisions(
     _: None = Depends(require_auth),
 ):
     """List all divisions"""
-    stmt = select(Division)
-    result = await db.execute(stmt)
-    divisions = result.scalars().all()
-    
-    return divisions
+    return await controller_list_divisions(db)
 
 
 # Category endpoints
@@ -347,25 +213,7 @@ async def create_category(
     - **division_id**: Parent division ID
     - **description**: Category description
     """
-    # Verify division exists
-    stmt = select(Division).where(Division.division_id == division_id)
-    result = await db.execute(stmt)
-    if not result.scalar_one_or_none():
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Division not found"
-        )
-    
-    category = Category(
-        name=name,
-        division_id=division_id,
-        description=description,
-    )
-    db.add(category)
-    await db.commit()
-    await db.refresh(category)
-    
-    return category
+    return await controller_create_category(name, division_id, description, db)
 
 
 @categories_router.get("")
@@ -379,12 +227,4 @@ async def list_categories(
     
     - **division_id**: Filter by division (optional)
     """
-    stmt = select(Category)
-    
-    if division_id:
-        stmt = stmt.where(Category.division_id == division_id)
-    
-    result = await db.execute(stmt)
-    categories = result.scalars().all()
-    
-    return categories
+    return await controller_list_categories(db, division_id)

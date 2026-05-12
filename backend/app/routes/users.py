@@ -3,13 +3,16 @@ User management routes
 """
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.future import select
-from sqlalchemy import and_
 from typing import List
-from app.models import User, Role, UserRole
 from app.databases import get_db
+from app.controllers.users import (
+    assign_role_to_user as controller_assign_role_to_user,
+    get_user as controller_get_user,
+    get_user_roles as controller_get_user_roles,
+    remove_role_from_user as controller_remove_role_from_user,
+    update_user as controller_update_user,
+)
 from app.services.schemas import UserResponse, RoleResponse
-from datetime import datetime, timezone
 
 router = APIRouter(prefix="/users", tags=["users"])
 
@@ -37,17 +40,7 @@ async def get_user(
     
     - **user_id**: User ID
     """
-    stmt = select(User).where(User.user_id == user_id)
-    result = await db.execute(stmt)
-    user = result.scalar_one_or_none()
-    
-    if not user:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="User not found"
-        )
-    
-    return user
+    return await controller_get_user(user_id, db)
 
 
 @router.put("/{user_id}", response_model=UserResponse)
@@ -64,31 +57,7 @@ async def update_user(
     - **full_name**: Optional full name
     - **is_active**: Optional active status (admin only)
     """
-    # TODO: Check if user_id == current_user.user_id for authorization
-    
-    stmt = select(User).where(User.user_id == user_id)
-    result = await db.execute(stmt)
-    user = result.scalar_one_or_none()
-    
-    if not user:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="User not found"
-        )
-    
-    # Update allowed fields
-    if "full_name" in update_data:
-        user.full_name = update_data["full_name"]
-    
-    if "is_active" in update_data:  # TODO: check admin role
-        user.is_active = update_data["is_active"]
-    
-    user.updated_at = datetime.now(timezone.utc)
-    
-    await db.commit()
-    await db.refresh(user)
-    
-    return user
+    return await controller_update_user(user_id, update_data, db)
 
 
 @router.post("/{user_id}/roles", response_model=RoleResponse)
@@ -104,47 +73,7 @@ async def assign_role_to_user(
     - **user_id**: User ID
     - **role_id**: Role ID to assign
     """
-    # Check if user is admin (TODO: implement proper admin check)
-    
-    stmt = select(User).where(User.user_id == user_id)
-    result = await db.execute(stmt)
-    user = result.scalar_one_or_none()
-    
-    if not user:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="User not found"
-        )
-    
-    stmt = select(Role).where(Role.role_id == role_id)
-    result = await db.execute(stmt)
-    role = result.scalar_one_or_none()
-    
-    if not role:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Role not found"
-        )
-    
-    # Check if user already has this role
-    stmt = select(UserRole).where(
-        and_(UserRole.user_id == user_id, UserRole.role_id == role_id)
-    )
-    result = await db.execute(stmt)
-    existing = result.scalar_one_or_none()
-    
-    if existing:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="User already has this role"
-        )
-    
-    # Assign role
-    user_role = UserRole(user_id=user_id, role_id=role_id)
-    db.add(user_role)
-    await db.commit()
-    
-    return role
+    return await controller_assign_role_to_user(user_id, role_id, db)
 
 
 @router.delete("/{user_id}/roles/{role_id}")
@@ -160,24 +89,7 @@ async def remove_role_from_user(
     - **user_id**: User ID
     - **role_id**: Role ID to remove
     """
-    # Check if user is admin (TODO: implement proper admin check)
-    
-    stmt = select(UserRole).where(
-        and_(UserRole.user_id == user_id, UserRole.role_id == role_id)
-    )
-    result = await db.execute(stmt)
-    user_role = result.scalar_one_or_none()
-    
-    if not user_role:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="User role assignment not found"
-        )
-    
-    await db.delete(user_role)
-    await db.commit()
-    
-    return {"message": "Role removed from user"}
+    return await controller_remove_role_from_user(user_id, role_id, db)
 
 
 @router.get("/{user_id}/roles", response_model=List[RoleResponse])
@@ -191,8 +103,4 @@ async def get_user_roles(
     
     - **user_id**: User ID
     """
-    stmt = select(Role).join(UserRole).where(UserRole.user_id == user_id)
-    result = await db.execute(stmt)
-    roles = result.scalars().all()
-    
-    return roles
+    return await controller_get_user_roles(user_id, db)

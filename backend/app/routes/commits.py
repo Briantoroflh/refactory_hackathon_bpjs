@@ -3,12 +3,16 @@ Commit tracking and analytics routes
 """
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.future import select
-from sqlalchemy import and_, func, or_
 from typing import Optional
-from app.models import ProjectCommitTracking, CommitChangeLogs, ProjectTask
 from app.databases import get_db
-from datetime import datetime, timezone
+from app.controllers.commits import (
+    correct_commit_attribution as controller_correct_commit_attribution,
+    get_commit_statistics as controller_get_commit_statistics,
+    get_file_history as controller_get_file_history,
+    list_commits as controller_list_commits,
+    search_commits as controller_search_commits,
+    store_commit as controller_store_commit,
+)
 
 router = APIRouter(tags=["commits"])
 
@@ -46,33 +50,7 @@ async def store_commit(
     - **additions**: Lines added
     - **deletions**: Lines deleted
     """
-    # Check for duplicate commit
-    stmt = select(ProjectCommitTracking).where(
-        ProjectCommitTracking.commit_hash == commit_hash
-    )
-    result = await db.execute(stmt)
-    if result.scalar_one_or_none():
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Commit already recorded"
-        )
-    
-    commit = ProjectCommitTracking(
-        project_id=project_id,
-        commit_hash=commit_hash,
-        worker_id=worker_id,
-        commit_message=commit_message,
-        commit_date=commit_date,
-        files_changed=files_changed,
-        additions=additions,
-        deletions=deletions,
-    )
-    
-    db.add(commit)
-    await db.commit()
-    await db.refresh(commit)
-    
-    return commit
+    return await controller_store_commit(project_id, commit_hash, worker_id, commit_message, commit_date, files_changed, additions, deletions, db)
 
 
 @router.get("/projects/{project_id}/commits")
@@ -96,25 +74,7 @@ async def list_commits(
     - **start_date**: Filter from date (ISO format)
     - **end_date**: Filter to date (ISO format)
     """
-    stmt = select(ProjectCommitTracking).where(
-        ProjectCommitTracking.project_id == project_id
-    )
-    
-    if worker_id:
-        stmt = stmt.where(ProjectCommitTracking.worker_id == worker_id)
-    
-    if start_date:
-        stmt = stmt.where(ProjectCommitTracking.commit_date >= start_date)
-    
-    if end_date:
-        stmt = stmt.where(ProjectCommitTracking.commit_date <= end_date)
-    
-    stmt = stmt.offset(skip).limit(limit).order_by(ProjectCommitTracking.commit_date.desc())
-    
-    result = await db.execute(stmt)
-    commits = result.scalars().all()
-    
-    return {"project_id": project_id, "commits": commits}
+    return await controller_list_commits(project_id, db, skip, limit, worker_id, start_date, end_date)
 
 
 @router.get("/commits")
@@ -128,19 +88,7 @@ async def search_commits(
     
     - **message_search**: Search term for commit message
     """
-    stmt = select(ProjectCommitTracking)
-    
-    if message_search:
-        stmt = stmt.where(
-            ProjectCommitTracking.commit_message.ilike(f"%{message_search}%")
-        )
-    
-    stmt = stmt.limit(100)
-    
-    result = await db.execute(stmt)
-    commits = result.scalars().all()
-    
-    return {"commits": commits}
+    return await controller_search_commits(db, message_search)
 
 
 @router.get("/projects/{project_id}/commits/file/{file_path:path}")
@@ -156,13 +104,7 @@ async def get_file_history(
     - **project_id**: Project ID
     - **file_path**: File path to search
     """
-    # TODO: Implement file-level tracking
-    # This requires storing file paths in commits table
-    return {
-        "project_id": project_id,
-        "file_path": file_path,
-        "commits": []
-    }
+    return await controller_get_file_history(project_id, file_path)
 
 
 @router.post("/commits/{commit_id}/attribution")
@@ -180,34 +122,7 @@ async def correct_commit_attribution(
     - **correct_worker_id**: Correct worker ID
     - **reason**: Reason for correction
     """
-    stmt = select(ProjectCommitTracking).where(
-        ProjectCommitTracking.commit_id == commit_id
-    )
-    result = await db.execute(stmt)
-    commit = result.scalar_one_or_none()
-    
-    if not commit:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Commit not found"
-        )
-    
-    # Log the change
-    change_log = CommitChangeLogs(
-        commit_id=commit_id,
-        field_name="worker_id",
-        old_value=str(commit.worker_id),
-        new_value=str(correct_worker_id),
-        changed_by_user_id=1,  # TODO: Get from current user
-        change_reason=reason,
-    )
-    
-    db.add(change_log)
-    commit.worker_id = correct_worker_id
-    
-    await db.commit()
-    
-    return {"message": "Commit attribution corrected"}
+    return await controller_correct_commit_attribution(commit_id, correct_worker_id, reason, db)
 
 
 @router.get("/projects/{project_id}/commit-stats")
@@ -227,27 +142,4 @@ async def get_commit_statistics(
     - Total lines changed
     - Commit frequency
     """
-    # Total commits
-    stmt = select(func.count(ProjectCommitTracking.commit_id)).where(
-        ProjectCommitTracking.project_id == project_id
-    )
-    result = await db.execute(stmt)
-    total_commits = result.scalar() or 0
-    
-    # Total lines changed
-    stmt = select(
-        func.sum(ProjectCommitTracking.additions),
-        func.sum(ProjectCommitTracking.deletions)
-    ).where(ProjectCommitTracking.project_id == project_id)
-    result = await db.execute(stmt)
-    row = result.first()
-    total_additions = row[0] or 0
-    total_deletions = row[1] or 0
-    
-    return {
-        "project_id": project_id,
-        "total_commits": total_commits,
-        "total_additions": total_additions,
-        "total_deletions": total_deletions,
-        "files_changed_avg": 0,  # TODO: Calculate average
-    }
+    return await controller_get_commit_statistics(project_id, db)

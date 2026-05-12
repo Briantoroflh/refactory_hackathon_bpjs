@@ -3,17 +3,23 @@ Task management routes
 """
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.future import select
-from sqlalchemy import and_, func
 from typing import List, Optional
-from app.models import (
-    ProjectTask,
-    ProjectTaskWorkload,
-    ProjectTaskComment,
-    ProjectTaskHistory,
-    Project,
-)
 from app.databases import get_db
+from app.controllers.tasks import (
+    add_comment as controller_add_comment,
+    create_task as controller_create_task,
+    get_assigned_to_me as controller_get_assigned_to_me,
+    get_comments as controller_get_comments,
+    get_task as controller_get_task,
+    get_task_by_id as controller_get_task_by_id,
+    get_task_history as controller_get_task_history,
+    get_worklog as controller_get_worklog,
+    list_tasks as controller_list_tasks,
+    log_workload as controller_log_workload,
+    update_task as controller_update_task,
+    update_task_assignee as controller_update_task_assignee,
+    update_task_status as controller_update_task_status,
+)
 from app.services.schemas import (
     ProjectTaskResponse,
     ProjectTaskCreateRequest,
@@ -22,8 +28,6 @@ from app.services.schemas import (
     ProjectTaskWorkloadRequest,
     ProjectTaskCommentRequest,
 )
-from app.services.audit import log_action, log_field_change
-from datetime import datetime, timezone
 
 router = APIRouter(prefix="/projects/{project_id}/tasks", tags=["tasks"])
 
@@ -54,44 +58,7 @@ async def create_task(
     - **priority**: Priority level (high, medium, low)
     - **deadline**: Deadline date (ISO format)
     """
-    # Verify project exists
-    stmt = select(Project).where(Project.project_id == project_id)
-    result = await db.execute(stmt)
-    if not result.scalar_one_or_none():
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Project not found"
-        )
-    
-    task = ProjectTask(
-        project_id=project_id,
-        title=req.title,
-        description=req.description,
-        story_points=req.story_points,
-        assigned_to=req.assigned_to,
-        priority=req.priority,
-        deadline=req.deadline,
-        status="backlog",
-        created_by=1,  # TODO: Get from current user
-    )
-    
-    db.add(task)
-    await db.flush()
-    
-    # Log task creation
-    await log_action(
-        db,
-        user_id=1,  # TODO: Get from current user
-        action="CREATE",
-        resource_type="TASK",
-        resource_id=task.task_id,
-        details=f"Created task: {req.title} in project {project_id}"
-    )
-    
-    await db.commit()
-    await db.refresh(task)
-    
-    return task
+    return await controller_create_task(project_id, req, db)
 
 
 @router.get("", response_model=List[ProjectTaskResponse])
@@ -115,21 +82,7 @@ async def list_tasks(
     - **assigned_to**: Filter by assignee
     - **priority**: Filter by priority
     """
-    stmt = select(ProjectTask).where(ProjectTask.project_id == project_id)
-    
-    if status:
-        stmt = stmt.where(ProjectTask.status == status)
-    if assigned_to:
-        stmt = stmt.where(ProjectTask.assigned_to == assigned_to)
-    if priority:
-        stmt = stmt.where(ProjectTask.priority == priority)
-    
-    stmt = stmt.offset(skip).limit(limit)
-    
-    result = await db.execute(stmt)
-    tasks = result.scalars().all()
-    
-    return tasks
+    return await controller_list_tasks(project_id, db, skip, limit, status, assigned_to, priority)
 
 
 @router.get("/{task_id}", response_model=ProjectTaskResponse)
@@ -145,22 +98,7 @@ async def get_task(
     - **project_id**: Project ID
     - **task_id**: Task ID
     """
-    stmt = select(ProjectTask).where(
-        and_(
-            ProjectTask.task_id == task_id,
-            ProjectTask.project_id == project_id
-        )
-    )
-    result = await db.execute(stmt)
-    task = result.scalar_one_or_none()
-    
-    if not task:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Task not found"
-        )
-    
-    return task
+    return await controller_get_task(project_id, task_id, db)
 
 
 @router.put("/{task_id}", response_model=ProjectTaskResponse)
@@ -178,41 +116,7 @@ async def update_task(
     - **task_id**: Task ID
     - **version**: Current version (for optimistic locking)
     """
-    stmt = select(ProjectTask).where(
-        and_(
-            ProjectTask.task_id == task_id,
-            ProjectTask.project_id == project_id,
-            ProjectTask.version == req.version
-        )
-    )
-    result = await db.execute(stmt)
-    task = result.scalar_one_or_none()
-    
-    if not task:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail="Task not found or version mismatch"
-        )
-    
-    # Update fields
-    if req.title:
-        task.title = req.title
-    if req.description is not None:
-        task.description = req.description
-    if req.story_points:
-        task.story_points = req.story_points
-    if req.priority:
-        task.priority = req.priority
-    if req.deadline:
-        task.deadline = req.deadline
-    
-    task.version += 1
-    task.updated_at = datetime.now(timezone.utc)
-    
-    await db.commit()
-    await db.refresh(task)
-    
-    return task
+    return await controller_update_task(project_id, task_id, req, db)
 
 
 @router.patch("/{task_id}/status", response_model=ProjectTaskResponse)
@@ -231,37 +135,7 @@ async def update_task_status(
     - **status**: New status (backlog, in_progress, in_review, completed, closed)
     - **version**: Current version
     """
-    stmt = select(ProjectTask).where(
-        and_(
-            ProjectTask.task_id == task_id,
-            ProjectTask.project_id == project_id,
-            ProjectTask.version == req.version
-        )
-    )
-    result = await db.execute(stmt)
-    task = result.scalar_one_or_none()
-    
-    if not task:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail="Task not found or version mismatch"
-        )
-    
-    valid_statuses = {"backlog", "in_progress", "in_review", "completed", "closed"}
-    if req.status not in valid_statuses:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Invalid status. Must be one of: {valid_statuses}"
-        )
-    
-    task.status = req.status
-    task.version += 1
-    task.updated_at = datetime.now(timezone.utc)
-    
-    await db.commit()
-    await db.refresh(task)
-    
-    return task
+    return await controller_update_task_status(project_id, task_id, req, db)
 
 
 @router.patch("/{task_id}/assignee")
@@ -279,27 +153,7 @@ async def update_task_assignee(
     - **task_id**: Task ID
     - **assigned_to**: New assignee user ID
     """
-    stmt = select(ProjectTask).where(
-        and_(
-            ProjectTask.task_id == task_id,
-            ProjectTask.project_id == project_id
-        )
-    )
-    result = await db.execute(stmt)
-    task = result.scalar_one_or_none()
-    
-    if not task:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Task not found"
-        )
-    
-    task.assigned_to = assigned_to
-    task.updated_at = datetime.now(timezone.utc)
-    
-    await db.commit()
-    
-    return {"message": "Assignee updated"}
+    return await controller_update_task_assignee(project_id, task_id, assigned_to, db)
 
 
 @router.post("/{task_id}/worklog")
@@ -319,32 +173,7 @@ async def log_workload(
     - **hours_worked**: Hours worked (0-24)
     - **description**: Work description
     """
-    # Verify task exists
-    stmt = select(ProjectTask).where(
-        and_(
-            ProjectTask.task_id == task_id,
-            ProjectTask.project_id == project_id
-        )
-    )
-    result = await db.execute(stmt)
-    if not result.scalar_one_or_none():
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Task not found"
-        )
-    
-    workload = ProjectTaskWorkload(
-        task_id=task_id,
-        worker_id=1,  # TODO: Get from current user
-        work_date=req.work_date,
-        hours_worked=req.hours_worked,
-        description=req.description,
-    )
-    
-    db.add(workload)
-    await db.commit()
-    
-    return {"message": "Worklog recorded successfully"}
+    return await controller_log_workload(project_id, task_id, req, db)
 
 
 @router.get("/{task_id}/worklog")
@@ -360,11 +189,7 @@ async def get_worklog(
     - **project_id**: Project ID
     - **task_id**: Task ID
     """
-    stmt = select(ProjectTaskWorkload).where(ProjectTaskWorkload.task_id == task_id)
-    result = await db.execute(stmt)
-    worklogs = result.scalars().all()
-    
-    return {"task_id": task_id, "worklogs": worklogs}
+    return await controller_get_worklog(project_id, task_id, db)
 
 
 @router.post("/{task_id}/comments")
@@ -382,30 +207,7 @@ async def add_comment(
     - **task_id**: Task ID
     - **content**: Comment content
     """
-    # Verify task exists
-    stmt = select(ProjectTask).where(
-        and_(
-            ProjectTask.task_id == task_id,
-            ProjectTask.project_id == project_id
-        )
-    )
-    result = await db.execute(stmt)
-    if not result.scalar_one_or_none():
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Task not found"
-        )
-    
-    comment = ProjectTaskComment(
-        task_id=task_id,
-        user_id=1,  # TODO: Get from current user
-        content=req.content,
-    )
-    
-    db.add(comment)
-    await db.commit()
-    
-    return {"message": "Comment added successfully"}
+    return await controller_add_comment(project_id, task_id, req, db)
 
 
 @router.get("/{task_id}/comments")
@@ -421,11 +223,7 @@ async def get_comments(
     - **project_id**: Project ID
     - **task_id**: Task ID
     """
-    stmt = select(ProjectTaskComment).where(ProjectTaskComment.task_id == task_id)
-    result = await db.execute(stmt)
-    comments = result.scalars().all()
-    
-    return {"task_id": task_id, "comments": comments}
+    return await controller_get_comments(project_id, task_id, db)
 
 
 @router.get("/{task_id}/history")
@@ -441,11 +239,7 @@ async def get_task_history(
     - **project_id**: Project ID
     - **task_id**: Task ID
     """
-    stmt = select(ProjectTaskHistory).where(ProjectTaskHistory.task_id == task_id)
-    result = await db.execute(stmt)
-    history = result.scalars().all()
-    
-    return {"task_id": task_id, "history": history}
+    return await controller_get_task_history(project_id, task_id, db)
 
 
 # Additional route for assigned tasks
@@ -461,17 +255,7 @@ async def get_task_by_id(
     """
     Get task by ID without requiring the project route prefix.
     """
-    stmt = select(ProjectTask).where(ProjectTask.task_id == task_id)
-    result = await db.execute(stmt)
-    task = result.scalar_one_or_none()
-
-    if not task:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Task not found"
-        )
-
-    return task
+    return await controller_get_task_by_id(task_id, db)
 
 
 @tasks_assigned_router.get("/assigned-to-me")
@@ -489,5 +273,4 @@ async def get_assigned_to_me(
     
     TODO: Filter by current user from JWT token
     """
-    # Placeholder - needs current user context from JWT
-    return {"tasks": []}
+    return await controller_get_assigned_to_me()

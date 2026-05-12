@@ -3,12 +3,15 @@ Audit logs retrieval and filtering endpoints
 """
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.future import select
-from sqlalchemy import and_, or_
 from typing import Optional
-from app.models import UserLog, AuditSystemLog
 from app.databases import get_db
-from datetime import datetime, timezone
+from app.controllers.audit import (
+    get_audit_logs as controller_get_audit_logs,
+    get_logs_by_action as controller_get_logs_by_action,
+    get_logs_by_resource as controller_get_logs_by_resource,
+    get_system_audit_logs as controller_get_system_audit_logs,
+    get_user_audit_logs as controller_get_user_audit_logs,
+)
 
 router = APIRouter(prefix="/audit-logs", tags=["audit-logs"])
 
@@ -46,20 +49,7 @@ async def get_audit_logs(
     - **start_date**: Filter from date (ISO format)
     - **end_date**: Filter to date (ISO format)
     """
-    stmt = select(UserLog)
-    
-    if start_date:
-        stmt = stmt.where(UserLog.timestamp >= start_date)
-    
-    if end_date:
-        stmt = stmt.where(UserLog.timestamp <= end_date)
-    
-    stmt = stmt.offset(skip).limit(limit).order_by(UserLog.timestamp.desc())
-    
-    result = await db.execute(stmt)
-    logs = result.scalars().all()
-    
-    return {"logs": logs, "skip": skip, "limit": limit}
+    return await controller_get_audit_logs(db, skip, limit, start_date, end_date)
 
 
 @router.get("/user/{user_id}")
@@ -77,14 +67,7 @@ async def get_user_audit_logs(
     - **skip**: Pagination offset
     - **limit**: Max records
     """
-    stmt = select(UserLog).where(UserLog.user_id == user_id)
-    
-    stmt = stmt.offset(skip).limit(limit).order_by(UserLog.timestamp.desc())
-    
-    result = await db.execute(stmt)
-    logs = result.scalars().all()
-    
-    return {"user_id": user_id, "logs": logs, "skip": skip, "limit": limit}
+    return await controller_get_user_audit_logs(user_id, db, skip, limit)
 
 
 @router.get("/action/{action}")
@@ -102,14 +85,7 @@ async def get_logs_by_action(
     - **skip**: Pagination offset
     - **limit**: Max records
     """
-    stmt = select(UserLog).where(UserLog.action == action)
-    
-    stmt = stmt.offset(skip).limit(limit).order_by(UserLog.timestamp.desc())
-    
-    result = await db.execute(stmt)
-    logs = result.scalars().all()
-    
-    return {"action": action, "logs": logs, "skip": skip, "limit": limit}
+    return await controller_get_logs_by_action(action, db, skip, limit)
 
 
 @router.get("/resource/{resource_id}")
@@ -129,23 +105,7 @@ async def get_logs_by_resource(
     - **skip**: Pagination offset
     - **limit**: Max records
     """
-    stmt = select(UserLog).where(UserLog.resource_id == resource_id)
-    
-    if resource_type:
-        stmt = stmt.where(UserLog.resource_type == resource_type)
-    
-    stmt = stmt.offset(skip).limit(limit).order_by(UserLog.timestamp.desc())
-    
-    result = await db.execute(stmt)
-    logs = result.scalars().all()
-    
-    return {
-        "resource_id": resource_id,
-        "resource_type": resource_type,
-        "logs": logs,
-        "skip": skip,
-        "limit": limit
-    }
+    return await controller_get_logs_by_resource(resource_id, db, skip, limit, resource_type)
 
 
 @router.get("/system")
@@ -165,17 +125,4 @@ async def get_system_audit_logs(
     - **resource_type**: Filter by resource type
     - **action**: Filter by action
     """
-    stmt = select(AuditSystemLog)
-    
-    if resource_type:
-        stmt = stmt.where(AuditSystemLog.resource_type == resource_type)
-    
-    if action:
-        stmt = stmt.where(AuditSystemLog.action == action)
-    
-    stmt = stmt.offset(skip).limit(limit).order_by(AuditSystemLog.timestamp.desc())
-    
-    result = await db.execute(stmt)
-    logs = result.scalars().all()
-    
-    return {"logs": logs, "skip": skip, "limit": limit}
+    return await controller_get_system_audit_logs(db, skip, limit, resource_type, action)
