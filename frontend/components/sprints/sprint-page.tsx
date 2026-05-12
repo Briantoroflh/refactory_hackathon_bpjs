@@ -1,5 +1,6 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { createTaskFromInput, moveTaskToStatus } from "@/lib/sprints/board";
 import { fetchSprintBoardData } from "@/lib/sprints/api";
@@ -7,18 +8,39 @@ import { sprintBoardMockData } from "@/lib/sprints/mock-data";
 import {
   createMembersMap,
   filterTasks,
+  getDueDateState,
   getSprintPointSummary,
   getSprintProgress,
   groupTasksByStatus,
 } from "@/lib/sprints/selectors";
 import type { SprintBoardData, SprintFilterState, SprintTaskStatus } from "@/lib/sprints/types";
-import { CreateTaskModal } from "./create-task-modal";
-import { KanbanBoard } from "./kanban-board";
-import { SprintEmptyState } from "./sprint-empty-state";
 import { SprintNavbar } from "./sprint-navbar";
 import { SprintSidebar } from "./sprint-sidebar";
 import { SprintSkeleton } from "./sprint-skeleton";
-import { SprintOverview, SprintStatCards } from "./sprint-statistics";
+
+// Lazy load heavy components
+const KanbanBoard = dynamic(() => import("./kanban-board").then(mod => mod.KanbanBoard), {
+  loading: () => <div className="h-[400px] animate-pulse rounded-3xl bg-slate-100" />,
+  ssr: false
+});
+
+const CreateTaskModal = dynamic(() => import("./create-task-modal").then(mod => mod.CreateTaskModal), {
+  ssr: false
+});
+
+const SprintOverview = dynamic(() => import("./sprint-statistics").then(mod => mod.SprintOverview), {
+  loading: () => <div className="h-[200px] animate-pulse rounded-[24px] bg-slate-100" />,
+  ssr: false
+});
+
+const SprintStatCards = dynamic(() => import("./sprint-statistics").then(mod => mod.SprintStatCards), {
+  loading: () => <div className="h-[300px] animate-pulse rounded-[24px] bg-slate-100" />,
+  ssr: false
+});
+
+const SprintEmptyState = dynamic(() => import("./sprint-empty-state").then(mod => mod.SprintEmptyState), {
+  ssr: false
+});
 
 const defaultFilters: SprintFilterState = {
   query: "",
@@ -66,14 +88,22 @@ export function SprintPage() {
 
   const membersMap = useMemo(() => createMembersMap(boardData.members), [boardData.members]);
 
+  // Enhance tasks with pre-calculated metadata for performance
+  const enhancedTasks = useMemo(() => {
+    return boardData.tasks.map(task => ({
+      ...task,
+      dueState: getDueDateState(task.dueDate)
+    }));
+  }, [boardData.tasks]);
+
   const filteredTasks = useMemo(
-    () => filterTasks(boardData.tasks, filters, membersMap),
-    [boardData.tasks, filters, membersMap],
+    () => filterTasks(enhancedTasks, filters, membersMap),
+    [enhancedTasks, filters, membersMap],
   );
 
   const tasksByStatus = useMemo(() => groupTasksByStatus(filteredTasks), [filteredTasks]);
-  const progress = useMemo(() => getSprintProgress(boardData.tasks), [boardData.tasks]);
-  const pointSummary = useMemo(() => getSprintPointSummary(boardData.tasks), [boardData.tasks]);
+  const progress = useMemo(() => getSprintProgress(enhancedTasks), [enhancedTasks]);
+  const pointSummary = useMemo(() => getSprintPointSummary(enhancedTasks), [enhancedTasks]);
 
   const stats = useMemo(
     () => [

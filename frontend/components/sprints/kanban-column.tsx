@@ -1,7 +1,6 @@
 "use client";
 
 import type { SprintMember, SprintTask, SprintTaskStatus } from "@/lib/sprints/types";
-import { getDueDateState } from "@/lib/sprints/selectors";
 import { TaskCard } from "./task-card";
 
 type KanbanColumnProps = {
@@ -40,20 +39,17 @@ export function KanbanColumn({
 
       <div className="space-y-3">
         {tasks.length ? (
-          tasks.map((task) => {
-            const dueState = getDueDateState(task.dueDate);
-            return (
-              <TaskCard
-                key={task.id}
-                task={task}
-                membersMap={membersMap}
-                dueLabel={dueState.label}
-                dueTone={dueState.tone}
-                onDragStart={onDragStart}
-                onDragEnd={onDragEnd}
-              />
-            );
-          })
+          tasks.map((task) => (
+            <TaskCard
+              key={task.id}
+              task={task}
+              membersMap={membersMap}
+              dueLabel={task.dueState?.label ?? ""}
+              dueTone={task.dueState?.tone ?? "neutral"}
+              onDragStart={onDragStart}
+              onDragEnd={onDragEnd}
+            />
+          ))
         ) : (
           <div className="rounded-2xl border border-dashed border-[#d8dcec] bg-white/65 p-6 text-center text-[15px] text-slate-500">
             No tasks yet in this column.

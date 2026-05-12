@@ -12,12 +12,46 @@ export function LoginPage() {
         <div className="absolute inset-0 bg-[linear-gradient(150deg,transparent_0%,transparent_36%,rgba(255,255,255,0.08)_36%,transparent_37%,transparent_58%,rgba(255,255,255,0.07)_58%,transparent_59%)] opacity-70" />
         <div className="relative flex w-full flex-col justify-between px-12 py-10 lg:px-16 lg:py-14">
           <div className="relative z-10 flex items-center gap-5 text-[#0b1020]">
-            <BloomMarkIcon className="h-10 w-10 lg:h-12 lg:w-12" />
-            <span className="text-[20px] font-medium tracking-[-0.02em] text-white lg:text-[22px]">Bloom</span>
+            <BloomMarkIcon className="h-10 w-10 text-white lg:h-12 lg:w-12" />
+            <span className="text-[22px] font-bold tracking-[-0.02em] text-white lg:text-[24px]">Bloom<span className="text-blue-300">OS</span></span>
           </div>
 
-          <div className="absolute inset-x-0 bottom-0 top-1/3 bg-[radial-gradient(circle_at_20%_72%,rgba(255,255,255,0.15),transparent_20%),radial-gradient(circle_at_68%_58%,rgba(255,255,255,0.09),transparent_18%),radial-gradient(circle_at_42%_88%,rgba(255,255,255,0.13),transparent_24%)] opacity-80" />
-          <div className="absolute bottom-20 left-10 right-10 h-[36rem] rounded-[2.5rem] border border-white/10 bg-[linear-gradient(145deg,rgba(255,255,255,0.06),transparent_42%,rgba(255,255,255,0.04)_100%)] blur-0 lg:h-[42rem]" />
+          <div className="relative z-10 flex flex-col justify-center">
+            <div className="max-w-md animate-fade-in" style={{ animationDelay: '0.2s' }}>
+              <h2 className="text-[32px] font-bold leading-[1.2] tracking-[-0.03em] text-white lg:text-[42px]">
+                The Intelligent OS for <span className="text-blue-300">Modern Engineering.</span>
+              </h2>
+              <p className="mt-6 text-[16px] leading-relaxed text-blue-100/80 lg:text-[18px]">
+                Streamline your workflow, track performance, and ship faster with our AI-powered engineering platform.
+              </p>
+            </div>
+
+            <div className="mt-12 grid grid-cols-1 gap-6 animate-fade-in lg:mt-16" style={{ animationDelay: '0.4s' }}>
+              <div className="flex items-start gap-4 rounded-2xl border border-white/10 bg-white/5 p-5 backdrop-blur-sm transition-all hover:bg-white/10">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-400/20 text-blue-300">
+                  <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                  </svg>
+                </div>
+                <div>
+                  <h3 className="text-[15px] font-semibold text-white">Rapid Deployment</h3>
+                  <p className="mt-1 text-[13px] text-blue-100/60">Automate your CI/CD pipeline with ease.</p>
+                </div>
+              </div>
+
+              <div className="flex items-start gap-4 rounded-2xl border border-white/10 bg-white/5 p-5 backdrop-blur-sm transition-all hover:bg-white/10">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-indigo-400/20 text-indigo-300">
+                  <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                  </svg>
+                </div>
+                <div>
+                  <h3 className="text-[15px] font-semibold text-white">Advanced Analytics</h3>
+                  <p className="mt-1 text-[13px] text-blue-100/60">Real-time insights into team productivity.</p>
+                </div>
+              </div>
+            </div>
+          </div>
 
           <div className="relative z-10">
             <div className="max-w-sm text-white/90">
@@ -44,7 +78,7 @@ export function LoginPage() {
               <BloomMarkIcon className="h-14 w-14 text-black" />
             </div>
             <p className="text-[18px] font-medium tracking-[-0.02em] text-[#2f2fd9]">
-              Bloom OS
+              Bloom
             </p>
           </div>
 

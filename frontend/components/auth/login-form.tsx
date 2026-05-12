@@ -14,13 +14,15 @@ import {
   type LoginFormValues,
   validateLoginValues,
 } from "@/lib/auth/validation";
+import { useRouter } from "next/navigation";
 
 export function LoginForm() {
+  const router = useRouter();
   const [values, setValues] = useState<LoginFormValues>(() => createInitialLoginValues());
   const [errors, setErrors] = useState<LoginFormErrors>({});
   const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [status, setStatus] = useState<string | null>(null);
+  const [status, setStatus] = useState<{ type: 'success' | 'error', message: string } | null>(null);
 
   const emailError = errors.email;
   const passwordError = errors.password;
@@ -45,12 +47,18 @@ export function LoginForm() {
 
     setIsSubmitting(true);
     try {
-      await login(values);
-      setStatus("Request sent to the auth service.");
+      const response = await login(values);
+      setStatus({ type: 'success', message: "Sign in successful! Redirecting..." });
+      
+      // Store token if needed (though usually handled in api.ts or middleware)
+      // Redirect to dashboard on success
+      setTimeout(() => {
+        router.push("/dashboard");
+      }, 1000);
     } catch (error) {
-      setErrors({
-        form: error instanceof Error ? error.message : "Unable to sign in.",
-      });
+      const message = error instanceof Error ? error.message : "Unable to sign in.";
+      setStatus({ type: 'error', message });
+      setErrors({ form: message });
     } finally {
       setIsSubmitting(false);
     }
@@ -117,8 +125,10 @@ export function LoginForm() {
       ) : null}
 
       {status ? (
-        <p className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-700">
-          {status}
+        <p className={`rounded-2xl border px-4 py-3 text-sm font-medium ${
+          status.type === 'success' ? 'border-emerald-200 bg-emerald-50 text-emerald-700' : 'border-rose-200 bg-rose-50 text-rose-600'
+        }`}>
+          {status.message}
         </p>
       ) : null}
 

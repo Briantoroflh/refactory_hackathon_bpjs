@@ -18,6 +18,10 @@ export type SprintTask = {
   storyPoints: number;
   tags: string[];
   assigneeIds: string[];
+  dueState?: {
+    label: string;
+    tone: "neutral" | "warning" | "danger";
+  };
 };
 
 export type SprintSummary = {
