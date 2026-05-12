@@ -59,18 +59,18 @@ async def register(req: UserRegisterRequest, db: AsyncSession = Depends(get_db))
     await db.refresh(user)
     
     # Log user creation
-    await log_action(
-        db,
-        user_id=user.user_id,
-        action="CREATE",
-        resource_type="USER",
-        resource_id=user.user_id,
-        details=f"User registered: {user.email}"
-    )
+    # await log_action(
+    #     db,
+    #     user_id=user.user_id,
+    #     action="CREATE",
+    #     resource_type="USER",
+    #     resource_id=user.user_id,
+    #     details=f"User registered: {user.email}"
+    # )
     
     # Create tokens
-    access_token = create_access_token(data={"sub": user.user_id, "email": user.email})
-    refresh_token = create_refresh_token(data={"sub": user.user_id, "email": user.email})
+    access_token = create_access_token(data={"sub": str(user.user_id), "email": user.email})
+    refresh_token = create_refresh_token(data={"sub": str(user.user_id), "email": user.email})
     
     await db.commit()  # Commit audit logs
     
@@ -122,8 +122,8 @@ async def login(req: UserLoginRequest, db: AsyncSession = Depends(get_db), reque
         )
     
     # Create tokens
-    access_token = create_access_token(data={"sub": user.user_id, "email": user.email})
-    refresh_token = create_refresh_token(data={"sub": user.user_id, "email": user.email})
+    access_token = create_access_token(data={"sub": str(user.user_id), "email": user.email})
+    refresh_token = create_refresh_token(data={"sub": str(user.user_id), "email": user.email})
     
     # Log successful login
     # await log_auth_event(
@@ -157,8 +157,8 @@ async def login(req: UserLoginRequest, db: AsyncSession = Depends(get_db), reque
         )
     
     # Create tokens
-    access_token = create_access_token(data={"sub": user.user_id, "email": user.email})
-    refresh_token = create_refresh_token(data={"sub": user.user_id, "email": user.email})
+    access_token = create_access_token(data={"sub": str(user.user_id), "email": user.email})
+    refresh_token = create_refresh_token(data={"sub": str(user.user_id), "email": user.email})
     
     return TokenResponse(
         access_token=access_token,

@@ -452,6 +452,28 @@ async def get_task_history(
 tasks_assigned_router = APIRouter(prefix="/tasks", tags=["tasks"])
 
 
+@tasks_assigned_router.get("/{task_id}", response_model=ProjectTaskResponse)
+async def get_task_by_id(
+    task_id: int,
+    db: AsyncSession = Depends(get_db),
+    _: None = Depends(require_auth),
+):
+    """
+    Get task by ID without requiring the project route prefix.
+    """
+    stmt = select(ProjectTask).where(ProjectTask.task_id == task_id)
+    result = await db.execute(stmt)
+    task = result.scalar_one_or_none()
+
+    if not task:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Task not found"
+        )
+
+    return task
+
+
 @tasks_assigned_router.get("/assigned-to-me")
 async def get_assigned_to_me(
     db: AsyncSession = Depends(get_db),
