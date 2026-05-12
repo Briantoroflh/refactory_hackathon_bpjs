@@ -16,6 +16,9 @@ from app.models import (
     Category,
     User,
     UserRole,
+    Worker,
+    Team,
+    TeamMember,
 )
 from app.services import (
     hash_password,
@@ -63,6 +66,15 @@ async def seed_database():
             
             # Seed categories
             await seed_categories(db)
+
+            # Seed workers
+            await seed_workers(db)
+
+            # Seed teams
+            await seed_teams(db)
+
+            # Seed team members
+            await seed_team_members(db)
             
             print("✓ Database seeding completed successfully")
             
@@ -336,6 +348,190 @@ async def seed_categories(db: AsyncSession):
         db.add(category)
         print(f"  ✓ Created category: {cat_data['name']}")
     
+    await db.commit()
+
+
+async def seed_workers(db: AsyncSession):
+    """Seed default workers"""
+    workers = [
+        {
+            "full_name": "Basir",
+            "email": "basir.worker@example.com",
+            "division": "Engineering",
+            "phone": None,
+            "skills": ["python", "fastapi", "sqlalchemy"],
+        },
+        {
+            "full_name": "Dina Product",
+            "email": "dina.product@example.com",
+            "division": "Product",
+            "phone": None,
+            "skills": ["product management", "roadmap"],
+        },
+        {
+            "full_name": "Raka Frontend",
+            "email": "raka.frontend@example.com",
+            "division": "Engineering",
+            "phone": None,
+            "skills": ["nextjs", "typescript"],
+        },
+        {
+            "full_name": "Sinta Backend",
+            "email": "sinta.backend@example.com",
+            "division": "Engineering",
+            "phone": None,
+            "skills": ["python", "postgresql"],
+        },
+        {
+            "full_name": "Bagas QA",
+            "email": "bagas.qa@example.com",
+            "division": "Operations",
+            "phone": None,
+            "skills": ["testing", "automation"],
+        },
+    ]
+
+    for worker_data in workers:
+        stmt = select(Worker).where(Worker.email == worker_data["email"])
+        result = await db.execute(stmt)
+        if result.scalar_one_or_none():
+            print(f"  Worker '{worker_data['email']}' already exists, skipping")
+            continue
+
+        division_name = worker_data.get("division") or "Engineering"
+        stmt = select(Division).where(Division.name == division_name)
+        div_result = await db.execute(stmt)
+        division = div_result.scalar_one_or_none()
+
+        if not division:
+            stmt = select(Division).limit(1)
+            div_result = await db.execute(stmt)
+            division = div_result.scalar_one_or_none()
+
+        if not division:
+            print(f"  ✗ No division found for worker '{worker_data['email']}', skipping")
+            continue
+
+        worker = Worker(
+            full_name=worker_data["full_name"],
+            email=worker_data["email"],
+            division_id=division.division_id,
+            phone=worker_data.get("phone"),
+            skills=worker_data.get("skills", []),
+            employment_status="active",
+        )
+        db.add(worker)
+        print(f"  ✓ Created worker: {worker_data['email']}")
+
+    await db.commit()
+
+
+async def seed_teams(db: AsyncSession):
+    """Seed default teams"""
+    teams = [
+        {
+            "name": "Backend Team",
+            "category": "Backend",
+            "description": "Core backend team",
+            "capacity_hours": 320,
+            "status": "active",
+        },
+        {
+            "name": "Frontend Team",
+            "category": "Frontend",
+            "description": "Frontend web team",
+            "capacity_hours": 320,
+            "status": "active",
+        },
+        {
+            "name": "QA Team",
+            "category": "QA",
+            "description": "Quality assurance team",
+            "capacity_hours": 160,
+            "status": "active",
+        },
+    ]
+
+    for team_data in teams:
+        stmt = select(Team).where(Team.name == team_data["name"])
+        result = await db.execute(stmt)
+        if result.scalar_one_or_none():
+            print(f"  Team '{team_data['name']}' already exists, skipping")
+            continue
+
+        stmt = select(Category).where(Category.name == team_data["category"])
+        cat_result = await db.execute(stmt)
+        category = cat_result.scalar_one_or_none()
+
+        if not category:
+            print(f"  ✗ Category '{team_data['category']}' not found, skipping team")
+            continue
+
+        team = Team(
+            name=team_data["name"],
+            category_id=category.category_id,
+            description=team_data.get("description"),
+            capacity_hours=team_data.get("capacity_hours", 160),
+            status=team_data.get("status", "active"),
+        )
+        db.add(team)
+        print(f"  ✓ Created team: {team_data['name']}")
+
+    await db.commit()
+
+
+async def seed_team_members(db: AsyncSession):
+    """Seed default team members"""
+    members = {
+        "Backend Team": [
+            {"worker_email": "sinta.backend@example.com", "role": "lead"},
+            {"worker_email": "basir.worker@example.com", "role": "member"},
+        ],
+        "Frontend Team": [
+            {"worker_email": "raka.frontend@example.com", "role": "lead"},
+        ],
+        "QA Team": [
+            {"worker_email": "bagas.qa@example.com", "role": "lead"},
+            {"worker_email": "dina.product@example.com", "role": "member"},
+        ],
+    }
+
+    for team_name, team_members in members.items():
+        stmt = select(Team).where(Team.name == team_name)
+        team_result = await db.execute(stmt)
+        team = team_result.scalar_one_or_none()
+
+        if not team:
+            print(f"  ✗ Team '{team_name}' not found, skipping members")
+            continue
+
+        for member_data in team_members:
+            stmt = select(Worker).where(Worker.email == member_data["worker_email"])
+            worker_result = await db.execute(stmt)
+            worker = worker_result.scalar_one_or_none()
+
+            if not worker:
+                print(f"  ✗ Worker '{member_data['worker_email']}' not found, skipping")
+                continue
+
+            stmt = select(TeamMember).where(
+                (TeamMember.team_id == team.team_id) & (TeamMember.worker_id == worker.worker_id)
+            )
+            existing_result = await db.execute(stmt)
+            if existing_result.scalar_one_or_none():
+                continue
+
+            team_member = TeamMember(
+                team_id=team.team_id,
+                worker_id=worker.worker_id,
+                role=member_data.get("role", "member"),
+                is_active=True,
+                join_date=datetime.now(timezone.utc).isoformat(),
+            )
+            db.add(team_member)
+
+        print(f"  ✓ Assigned members to team: {team_name}")
+
     await db.commit()
 
 
