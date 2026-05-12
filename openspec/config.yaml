@@ -1,20 +1,63 @@
 schema: spec-driven
 
-# Project context (optional)
-# This is shown to AI when creating artifacts.
-# Add your tech stack, conventions, style guides, domain knowledge, etc.
-# Example:
-#   context: |
-#     Tech stack: TypeScript, React, Node.js
-#     We use conventional commits
-#     Domain: e-commerce platform
+context: |
+  ## Project Overview
+  Workforce Management Platform with AI Assistant for Engineering Teams
 
-# Per-artifact rules (optional)
-# Add custom rules for specific artifacts.
-# Example:
-#   rules:
-#     proposal:
-#       - Keep proposals under 500 words
-#       - Always include a "Non-goals" section
-#     tasks:
-#       - Break tasks into chunks of max 2 hours
+  ### Purpose
+  Monitor team productivity, reduce manual work, track commit activity, evaluate engineers by KPI, 
+  and provide AI-driven insights on workload, team performance, and decision support.
+
+  ### Tech Stack
+  Backend: Python, FastAPI, PostgreSQL, SQLAlchemy, Alembic (migrations)
+  Frontend: Next.js, JavaScript, TypeScript, React
+  Database: PostgreSQL with async support (databases library, asyncpg)
+  AI/ML: OpenAI API or similar for insights and assistant features
+  Testing: Vitest (frontend), pytest (backend), Playwright (e2e)
+  Code Quality: Black, isort, flake8, mypy (backend); ESLint, Prettier (frontend)
+
+  ### API Conventions
+  - RESTful endpoints with JSON responses
+  - Async/await patterns for FastAPI
+  - Standard HTTP status codes and error handling
+  - JWT-based authentication (passlib, python-jose)
+  - Request/response validation with Pydantic
+
+  ### Core Features
+  1. Team Productivity Dashboard - real-time metrics and KPI tracking
+  2. Git Integration - commit activity monitoring and analysis
+  3. Engineer Evaluation System - performance scoring based on configurable KPIs
+  4. Workload Analytics - team capacity and distribution insights
+  5. AI Assistant - intelligent recommendations and decision support
+  6. Performance Reports - automated insights and trend analysis
+
+  ### Data Model
+  - Teams, Engineers, Projects
+  - Commits, Pull Requests, Code Metrics
+  - KPI Definitions, Performance Scores
+  - Workload and Capacity Tracking
+  - Audit logs for sensitive actions
+
+  ### Integration Points
+  - Git platforms (GitHub, GitLab APIs) for commit and PR data
+  - External identity providers for auth (optional)
+  - AI service for insights and predictions
+
+rules:
+  proposal:
+    - Include rollback plan and data migration strategy
+    - Identify affected teams and user roles
+    - Address data privacy and compliance concerns
+  specs:
+    - Use Given/When/Then format for scenarios
+    - Include security and access control requirements
+    - Specify KPI calculation formulas where applicable
+  design:
+    - Include sequence diagrams for complex flows (Git sync, AI processing)
+    - Document async patterns and background job processing
+    - Include error handling and retry logic for external integrations
+    - Address database transaction isolation for concurrent updates
+  implementation:
+    - Ensure PII/sensitive data is properly encrypted and logged
+    - Include comprehensive API documentation and examples
+    - Add monitoring hooks for performance-critical operations
