@@ -11,6 +11,7 @@ from app.controllers.assistant import fetch_job_status, run_assistant_workflow
 from app.databases import get_db
 from app.models import Role, User, UserRole
 from app.services import AIJobResponse, AIWorkflowRequest, AIWorkflowResponse, verify_token
+from app.services.telemetry import get_ai_metrics
 
 router = APIRouter(prefix="/ai-assistant", tags=["ai-assistant"])
 
@@ -175,3 +176,35 @@ async def get_ai_job(
     current_user: Dict[str, Any] = Depends(get_current_ai_user),
 ):
     return await fetch_job_status(job_id, current_user, db)
+
+
+@router.get("/health", tags=["health"])
+async def ai_health_check() -> Dict[str, Any]:
+    """
+    Get AI assistant health metrics and telemetry.
+    
+    Returns:
+        Dictionary with health status, request counts, latency metrics, and error rates.
+    """
+    metrics = get_ai_metrics()
+    success_rate = (
+        (metrics.successful_requests / metrics.total_requests * 100)
+        if metrics.total_requests > 0
+        else 0.0
+    )
+    
+    return {
+        "status": "healthy" if metrics.total_requests == 0 or success_rate >= 80.0 else "degraded",
+        "total_requests": metrics.total_requests,
+        "successful_requests": metrics.successful_requests,
+        "failed_requests": metrics.failed_requests,
+        "success_rate_percent": round(success_rate, 2),
+        "latency_ms": {
+            "avg": round(metrics.avg_latency_ms, 2),
+            "min": round(metrics.min_latency_ms, 2) if metrics.min_latency_ms != float("inf") else None,
+            "max": round(metrics.max_latency_ms, 2),
+        },
+        "error_counts": metrics.error_counts,
+        "workflow_counts": metrics.workflow_counts,
+        "last_updated": metrics.last_updated.isoformat(),
+    }

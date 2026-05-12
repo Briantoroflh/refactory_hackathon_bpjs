@@ -19,11 +19,11 @@
 ## 4. Tests & Observability
 
 - [x] 4.1 Add unit tests for gateway retry/timeout behavior and normalization.
-- [ ] 4.2 Add API tests for workflow endpoints, role checks, and error handling.
-- [ ] 4.3 Add telemetry hooks (latency, errors) and a basic health metric for AI endpoints.
+- [x] 4.2 Add API tests for workflow endpoints, role checks, and error handling.
+- [x] 4.3 Add telemetry hooks (latency, errors) and a basic health metric for AI endpoints.
 
 ## 5. Rollout
 
-- [ ] 5.1 Deploy to staging with `OPENROUTER_ENABLED=false`, run smoke tests.
-- [ ] 5.2 Enable `OPENROUTER_ENABLED=true` in staging, validate outputs and costs.
-- [ ] 5.3 Document rollback and key-rotation steps in runbook.
+- [x] 5.1 Deploy to staging with `OPENROUTER_ENABLED=false`, run smoke tests.
+- [x] 5.2 Enable `OPENROUTER_ENABLED=true` in staging, validate outputs and costs.
+- [x] 5.3 Document rollback and key-rotation steps in runbook.

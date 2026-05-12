@@ -6,6 +6,7 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
+import time
 import uuid
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
@@ -14,6 +15,7 @@ from typing import Any, Dict, Optional
 import httpx
 
 from app.config import get_settings
+from app.services.telemetry import record_workflow_latency
 
 logger = logging.getLogger(__name__)
 
@@ -269,79 +271,103 @@ def _fallback_result(workflow: str, prompt: str) -> Dict[str, Any]:
 async def run_workflow(workflow: str, prompt: str, context: Dict[str, Any]) -> Dict[str, Any]:
     settings = get_settings()
     get_workflow_definition(workflow)
+    
+    start_time = time.monotonic()
+    error_type = None
 
-    if not settings.OPENROUTER_ENABLED:
-        logger.info("OpenRouter disabled; using fallback for workflow=%s", workflow)
-        return _fallback_result(workflow, prompt)
+    try:
+        if not settings.OPENROUTER_ENABLED:
+            logger.info("OpenRouter disabled; using fallback for workflow=%s", workflow)
+            result = _fallback_result(workflow, prompt)
+            latency_ms = (time.monotonic() - start_time) * 1000
+            record_workflow_latency(workflow, latency_ms, success=True)
+            return result
 
-    messages = build_messages(workflow, prompt, context)
-    payload = {
-        "model": settings.OPENROUTER_MODEL,
-        "messages": messages,
-    }
+        messages = build_messages(workflow, prompt, context)
+        payload = {
+            "model": settings.OPENROUTER_MODEL,
+            "messages": messages,
+        }
 
-    headers = {
-        "Authorization": f"Bearer {settings.OPENROUTER_API_KEY}",
-        "Content-Type": "application/json",
-    }
-    if settings.OPENROUTER_SITE_URL:
-        headers["HTTP-Referer"] = settings.OPENROUTER_SITE_URL
-    if settings.OPENROUTER_SITE_NAME:
-        headers["X-OpenRouter-Title"] = settings.OPENROUTER_SITE_NAME
+        headers = {
+            "Authorization": f"Bearer {settings.OPENROUTER_API_KEY}",
+            "Content-Type": "application/json",
+        }
+        if settings.OPENROUTER_SITE_URL:
+            headers["HTTP-Referer"] = settings.OPENROUTER_SITE_URL
+        if settings.OPENROUTER_SITE_NAME:
+            headers["X-OpenRouter-Title"] = settings.OPENROUTER_SITE_NAME
 
-    timeout = httpx.Timeout(settings.OPENROUTER_TIMEOUT_SECONDS)
-    url = f"{settings.OPENROUTER_BASE_URL.rstrip('/')}/chat/completions"
-    last_error: Optional[Exception] = None
-    last_message = "OpenRouter request failed"
+        timeout = httpx.Timeout(settings.OPENROUTER_TIMEOUT_SECONDS)
+        url = f"{settings.OPENROUTER_BASE_URL.rstrip('/')}/chat/completions"
+        last_error: Optional[Exception] = None
+        last_message = "OpenRouter request failed"
 
-    for attempt in range(settings.OPENROUTER_MAX_RETRIES + 1):
-        retryable = False
-        try:
-            async with httpx.AsyncClient(timeout=timeout) as client:
-                response = await client.post(url, headers=headers, json=payload)
+        for attempt in range(settings.OPENROUTER_MAX_RETRIES + 1):
+            retryable = False
+            try:
+                async with httpx.AsyncClient(timeout=timeout) as client:
+                    response = await client.post(url, headers=headers, json=payload)
 
-            if response.status_code >= 400:
-                retryable = response.status_code in {408, 425, 429, 500, 502, 503, 504}
-                message = response.text or f"OpenRouter request failed with status {response.status_code}"
-                raise AIServiceError(message=message, status_code=response.status_code, retryable=retryable)
+                if response.status_code >= 400:
+                    retryable = response.status_code in {408, 425, 429, 500, 502, 503, 504}
+                    message = response.text or f"OpenRouter request failed with status {response.status_code}"
+                    raise AIServiceError(message=message, status_code=response.status_code, retryable=retryable)
 
-            data = response.json()
-            content = ""
-            if data.get("choices"):
-                message = data["choices"][0].get("message", {})
-                content = message.get("content") or ""
+                data = response.json()
+                content = ""
+                if data.get("choices"):
+                    message = data["choices"][0].get("message", {})
+                    content = message.get("content") or ""
 
-            normalized_content, structured_output = _normalize_content(content)
-            usage = data.get("usage") or {}
-            return {
-                "workflow": workflow,
-                "status": "completed",
-                "model": data.get("model", settings.OPENROUTER_MODEL),
-                "content": normalized_content,
-                "structured_output": structured_output,
-                "source": "openrouter",
-                "usage": usage,
-            }
-        except (httpx.TimeoutException, httpx.RequestError) as exc:
-            last_error = exc
-            retryable = True
-            last_message = str(exc) or "OpenRouter request failed"
-        except AIServiceError as exc:
-            last_error = exc
-            retryable = exc.retryable
-            last_message = exc.message
+                normalized_content, structured_output = _normalize_content(content)
+                usage = data.get("usage") or {}
+                result = {
+                    "workflow": workflow,
+                    "status": "completed",
+                    "model": data.get("model", settings.OPENROUTER_MODEL),
+                    "content": normalized_content,
+                    "structured_output": structured_output,
+                    "source": "openrouter",
+                    "usage": usage,
+                }
+                
+                # Record successful workflow execution
+                latency_ms = (time.monotonic() - start_time) * 1000
+                record_workflow_latency(workflow, latency_ms, success=True)
+                return result
+                
+            except (httpx.TimeoutException, httpx.RequestError) as exc:
+                last_error = exc
+                retryable = True
+                last_message = str(exc) or "OpenRouter request failed"
+                error_type = type(exc).__name__
+            except AIServiceError as exc:
+                last_error = exc
+                retryable = exc.retryable
+                last_message = exc.message
+                error_type = "AIServiceError"
 
-        if attempt >= settings.OPENROUTER_MAX_RETRIES or not retryable:
-            break
+            if attempt >= settings.OPENROUTER_MAX_RETRIES or not retryable:
+                break
 
-        backoff = settings.OPENROUTER_RETRY_BACKOFF_SECONDS * (2 ** attempt)
-        await asyncio.sleep(backoff)
+            backoff = settings.OPENROUTER_RETRY_BACKOFF_SECONDS * (2 ** attempt)
+            await asyncio.sleep(backoff)
 
-    raise AIServiceError(
-        message=last_message,
-        status_code=getattr(last_error, "status_code", 502),
-        retryable=False,
-    )
+        raise AIServiceError(
+            message=last_message,
+            status_code=getattr(last_error, "status_code", 502),
+            retryable=False,
+        )
+    
+    except AIServiceError as exc:
+        latency_ms = (time.monotonic() - start_time) * 1000
+        record_workflow_latency(workflow, latency_ms, success=False, error_type=error_type or "AIServiceError")
+        raise
+    except Exception as exc:
+        latency_ms = (time.monotonic() - start_time) * 1000
+        record_workflow_latency(workflow, latency_ms, success=False, error_type=type(exc).__name__)
+        raise
 
 
 async def create_job(workflow: str, prompt: str, context: Dict[str, Any], user_id: int, user_role: str) -> AIJobRecord:
