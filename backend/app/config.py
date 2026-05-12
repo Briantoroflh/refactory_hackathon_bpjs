@@ -41,6 +41,27 @@ class Settings:
         self.API_TITLE = "SprintFlow API"
         self.API_VERSION = "0.1.0"
 
+        # OpenRouter AI assistant
+        self.OPENROUTER_ENABLED = os.getenv("OPENROUTER_ENABLED", "False").lower() == "true"
+        self.OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY", "")
+        self.OPENROUTER_BASE_URL = os.getenv(
+            "OPENROUTER_BASE_URL",
+            "https://openrouter.ai/api/v1",
+        )
+        self.OPENROUTER_MODEL = os.getenv(
+            "OPENROUTER_MODEL",
+            "nvidia/nemotron-3-super-120b-a12b:free",
+        )
+        self.OPENROUTER_TIMEOUT_SECONDS = float(
+            os.getenv("OPENROUTER_TIMEOUT_SECONDS", "45")
+        )
+        self.OPENROUTER_MAX_RETRIES = int(os.getenv("OPENROUTER_MAX_RETRIES", "2"))
+        self.OPENROUTER_RETRY_BACKOFF_SECONDS = float(
+            os.getenv("OPENROUTER_RETRY_BACKOFF_SECONDS", "1.5")
+        )
+        self.OPENROUTER_SITE_URL = os.getenv("OPENROUTER_SITE_URL", "")
+        self.OPENROUTER_SITE_NAME = os.getenv("OPENROUTER_SITE_NAME", self.API_TITLE)
+
 
 @lru_cache()
 def get_settings() -> Settings:

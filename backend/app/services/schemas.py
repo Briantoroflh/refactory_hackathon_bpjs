@@ -2,7 +2,7 @@
 Pydantic schemas for request/response validation
 """
 from pydantic import BaseModel, Field, EmailStr, field_validator
-from typing import Optional, List
+from typing import Optional, List, Dict, Any
 from datetime import datetime
 
 # ============= Auth Schemas =============
@@ -289,3 +289,34 @@ class WorkerKPISummaryResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+# ============= AI Assistant Schemas =============
+
+class AIWorkflowRequest(BaseModel):
+    """AI assistant workflow request."""
+    prompt: str = Field(..., min_length=1)
+    context: Dict[str, Any] = Field(default_factory=dict)
+    async_mode: bool = False
+
+
+class AIWorkflowResponse(BaseModel):
+    """AI assistant workflow response."""
+    workflow: str
+    status: str
+    model: str
+    content: str
+    structured_output: Optional[Dict[str, Any]] = None
+    usage: Optional[Dict[str, Any]] = None
+    source: str = "openrouter"
+    job_id: Optional[str] = None
+
+
+class AIJobResponse(BaseModel):
+    """Queued AI job response."""
+    job_id: str
+    workflow: str
+    status: str
+    model: str
+    result: Optional[AIWorkflowResponse] = None
+    error: Optional[str] = None

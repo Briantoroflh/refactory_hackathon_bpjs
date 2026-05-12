@@ -17,6 +17,7 @@ from app.services.responses import (
     is_enveloped_payload,
     extract_error_message,
 )
+from app.services.assistant import validate_ai_settings
 
 settings = get_settings()
 
@@ -167,6 +168,7 @@ def create_app() -> FastAPI:
     async def startup():
         """Initialize on startup"""
         logger.info("SprintFlow API starting up...")
+        validate_ai_settings()
         
         # Start background job scheduler
         from app.services.scheduler import start_scheduler
@@ -191,6 +193,7 @@ def create_app() -> FastAPI:
     from app.routes.workers import router as workers_router, kpi_router
     from app.routes.commits import router as commits_router
     from app.routes.audit import router as audit_router
+    from app.routes.assistant import router as assistant_router
     
     app.include_router(auth_router)
     app.include_router(users_router)
@@ -205,6 +208,7 @@ def create_app() -> FastAPI:
     app.include_router(kpi_router)
     app.include_router(commits_router)
     app.include_router(audit_router)
+    app.include_router(assistant_router)
 
     return app
 

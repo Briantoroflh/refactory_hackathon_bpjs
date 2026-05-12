@@ -27,6 +27,9 @@ from app.services.schemas import (
     ProjectTaskResponse,
     TeamResponse,
     WorkerResponse,
+    AIWorkflowRequest,
+    AIWorkflowResponse,
+    AIJobResponse,
 )
 
 __all__ = [
@@ -53,4 +56,7 @@ __all__ = [
     "ProjectTaskResponse",
     "TeamResponse",
     "WorkerResponse",
+    "AIWorkflowRequest",
+    "AIWorkflowResponse",
+    "AIJobResponse",
 ]
