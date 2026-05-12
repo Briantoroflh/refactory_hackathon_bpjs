@@ -68,6 +68,7 @@ class UserResponse(BaseModel):
     full_name: Optional[str]
     is_active: bool
     last_login: Optional[datetime]
+    roles: List[str] = []
 
     class Config:
         from_attributes = True

@@ -14,7 +14,8 @@ from app.models import (
     RolePermission,
     Division,
     Category,
-    User
+    User,
+    UserRole,
 )
 from app.services import (
     hash_password,
@@ -47,6 +48,9 @@ async def seed_database():
 
             # Seed default roles
             await seed_roles(db)
+
+            # Seed user-role assignments
+            await seed_user_roles(db)
             
             # Seed default permissions
             await seed_permissions(db)
@@ -332,6 +336,47 @@ async def seed_categories(db: AsyncSession):
         db.add(category)
         print(f"  ✓ Created category: {cat_data['name']}")
     
+    await db.commit()
+
+
+async def seed_user_roles(db: AsyncSession):
+    """Assign roles to seeded users"""
+    # Map user email -> list of role names
+    assignments = {
+        "admin@example.com": ["admin"],
+    }
+
+    for email, role_names in assignments.items():
+        # find user
+        stmt = select(User).where(User.email == email)
+        res = await db.execute(stmt)
+        user = res.scalar_one_or_none()
+
+        if not user:
+            print(f"  ✗ User '{email}' not found, skipping role assignments")
+            continue
+
+        for role_name in role_names:
+            stmt = select(Role).where(Role.name == role_name)
+            res = await db.execute(stmt)
+            role = res.scalar_one_or_none()
+
+            if not role:
+                print(f"  ✗ Role '{role_name}' not found, skipping")
+                continue
+
+            # check if user-role already exists
+            stmt = select(UserRole).where(
+                (UserRole.user_id == user.user_id) & (UserRole.role_id == role.role_id)
+            )
+            res = await db.execute(stmt)
+            if res.scalar_one_or_none():
+                continue
+
+            db.add(UserRole(user_id=user.user_id, role_id=role.role_id))
+
+        print(f"  ✓ Assigned roles to user: {email}")
+
     await db.commit()
 
 

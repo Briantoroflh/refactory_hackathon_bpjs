@@ -6,7 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 
 from app.databases import get_db
-from app.models import User
+from app.models import User, Role, UserRole
 from app.services import (
     hash_password,
     create_access_token,
@@ -83,13 +83,21 @@ async def login_user(req: UserLoginRequest, db: AsyncSession, request: Request |
     access_token = create_access_token(data={"sub": str(user.user_id), "email": user.email})
     refresh_token = create_refresh_token(data={"sub": str(user.user_id), "email": user.email})
 
+    # load user roles (names)
+    stmt = select(Role.name).join(UserRole, Role.role_id == UserRole.role_id).where(UserRole.user_id == user.user_id)
+    role_result = await db.execute(stmt)
+    role_names = [r for (r,) in role_result.all()]
+
     await db.commit()
+
+    user_data = UserResponse.model_validate(user)
+    user_data.roles = role_names
 
     return LoginResponse(
         access_token=access_token,
         refresh_token=refresh_token,
         expires_in=15 * 60,
-        user=UserResponse.model_validate(user),
+        user=user_data,
     )
 
 
