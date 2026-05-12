@@ -8,10 +8,11 @@ This runbook covers deployment, operations, and recovery procedures for the Open
 
 1. [Deployment](#deployment)
 2. [Feature Flag Management](#feature-flag-management)
-3. [API Key Rotation](#api-key-rotation)
-4. [Troubleshooting](#troubleshooting)
-5. [Rollback Procedures](#rollback-procedures)
-6. [Monitoring](#monitoring)
+3. [GitLab Integration & Context](#gitlab-integration--context)
+4. [API Key Rotation](#api-key-rotation)
+5. [Troubleshooting](#troubleshooting)
+6. [Rollback Procedures](#rollback-procedures)
+7. [Monitoring](#monitoring)
 
 ---
 
@@ -242,6 +243,120 @@ docker-compose up -d --no-deps --build api
 # Health check
 curl -X GET http://staging-api:8000/ai-assistant/health | jq .
 ```
+
+---
+
+## GitLab Integration & Context
+
+### Overview
+
+GitLab integration provides real-time commit metrics and repository health data that can be used as context for AI-powered workflow recommendations. The AI assistant uses this data to provide intelligent insights about team productivity, code velocity, and project health.
+
+### Available GitLab Metrics
+
+The following GitLab metrics are automatically calculated and available for AI context:
+
+**Commit Frequency**
+- Commits per day over specified period
+- Helps identify team velocity trends
+- Endpoint: `GET /api/v1/dashboard/gitlab-metrics?project_id=X`
+
+**Top Contributors**
+- List of developers by commit count
+- Sorted by activity level (most active first)
+- Includes commit counts and email addresses
+- Used for workload distribution analysis
+
+**Branch Activity**
+- Active branches and their commit counts
+- Identifies development patterns
+- Shows which branches receive most activity
+- Helps assess parallel development efforts
+
+**Commit Velocity**
+- Trend analysis: increasing, decreasing, or stable
+- Trend strength: percentage change over period
+- Used to predict sprint capacity
+- Identifies acceleration or burnout patterns
+
+**Repository Health Status**
+- Overall health: "healthy", "yellow" (warning), or "red" (critical)
+- Based on recent commit activity
+- Indicates whether team is actively working
+- Color-coded for quick visualization
+
+### Integrating GitLab Metrics in AI Workflows
+
+When calling AI assistant endpoints, include GitLab metrics in the context:
+
+```bash
+# Example: Planning with GitLab metrics
+curl -X POST http://localhost:8000/ai-assistant/planning \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "prompt": "Create a sprint plan based on our current velocity",
+    "context": {
+      "project_id": 1,
+      "include_gitlab_metrics": true,
+      "gitlab_data": {
+        "commit_frequency": 15,
+        "velocity_trend": "increasing",
+        "health_status": "healthy",
+        "top_contributors": ["alice@example.com", "bob@example.com"],
+        "active_branches": 4
+      }
+    }
+  }'
+```
+
+### Behind the Scenes: Data Flow
+
+1. **Automatic Synchronization**
+   - GitLab repositories are synced via background job (every 15 minutes by default)
+   - Commits stored in database with metadata (author, branch, timestamp, hash)
+   - Sync status logged in `global_job` table
+
+2. **Metrics Calculation**
+   - Metrics calculated on-demand via `/api/v1/dashboard/gitlab-metrics` endpoint
+   - Filtered by project and optional date range
+   - Cached for performance (see deployment checklist for caching options)
+
+3. **AI Context Enrichment**
+   - AI assistant can query metrics during workflow execution
+   - Metrics included in prompt context for more intelligent recommendations
+   - Results inform suggestions for sprint planning, workload balancing, etc.
+
+### Configuration for GitLab Integration
+
+Ensure these environment variables are set:
+
+```bash
+# GitLab API Configuration
+GITLAB_API_BASE_URL=https://gitlab.com  # or self-hosted instance
+GITLAB_SYNC_INTERVAL_MINUTES=15         # How often to sync commits
+GITLAB_ENABLE_AUTO_SYNC=True            # Enable background sync job
+TOKEN_ENCRYPTION_KEY=<secure_key>       # For encrypting stored API tokens
+```
+
+### Troubleshooting GitLab Integration
+
+**Commits not syncing:**
+1. Verify GitLab repository is linked: `GET /api/v1/repositories/gitlab/{project_id}`
+2. Check sync job status: `SELECT * FROM global_job WHERE job_name = 'gitlab_sync_repositories' ORDER BY executed_at DESC LIMIT 5;`
+3. Verify encryption key is set: `ECHO $TOKEN_ENCRYPTION_KEY`
+4. Check API token permissions (must have `api` scope)
+
+**Metrics endpoint returning empty:**
+1. Verify commits exist in database: `SELECT COUNT(*) FROM commits WHERE repository_id = X;`
+2. Verify repository is linked to project: `SELECT * FROM gitlab_repositories WHERE project_id = X;`
+3. Check date range filters (may need to extend date range)
+
+**AI assistant not receiving GitLab context:**
+1. Verify `GITLAB_ENABLE_AUTO_SYNC=True`
+2. Check metrics endpoint manually: `curl /api/v1/dashboard/gitlab-metrics?project_id=1`
+3. Verify project_id is correct in request
+4. Review logs: `docker-compose logs api | grep -i gitlab`
 
 ---
 

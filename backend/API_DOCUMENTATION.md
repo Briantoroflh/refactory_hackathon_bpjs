@@ -220,6 +220,26 @@ uvicorn app.main:app --reload --port 8000
 - `POST /commits/{commit_id}/attribution` - Correct attribution
 - `GET /projects/{project_id}/commit-stats` - Commit statistics
 
+### GitLab Integration
+
+**Repository Management:**
+- `POST /api/v1/repositories/gitlab/link/{project_id}` - Link a GitLab repository to a project
+- `GET /api/v1/repositories/gitlab/{project_id}` - Get linked repository details
+- `DELETE /api/v1/repositories/gitlab/{project_id}` - Unlink a repository
+- `POST /api/v1/repositories/gitlab/sync/{project_id}` - Trigger manual sync of commits
+
+**Commit Queries:**
+- `GET /api/v1/commits` - List commits with filters (project_id, days, author_email, branch)
+- `GET /api/v1/projects/{project_id}/commit-stats` - Get commit statistics
+
+**Dashboard Metrics:**
+- `GET /api/v1/dashboard/gitlab-metrics/{project_id}` - Get comprehensive dashboard metrics
+- `GET /api/v1/dashboard/gitlab-metrics/{project_id}/frequency` - Get commit frequency metrics
+- `GET /api/v1/dashboard/gitlab-metrics/{project_id}/velocity` - Get commit velocity (trend)
+- `GET /api/v1/dashboard/gitlab-metrics/{project_id}/health` - Get repository health status
+
+See [GITLAB_INTEGRATION.md](./GITLAB_INTEGRATION.md) for complete setup and usage guide.
+
 ### Audit Logs
 
 - `GET /audit-logs` - List audit logs (admin)
