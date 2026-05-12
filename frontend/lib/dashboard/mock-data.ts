@@ -1,4 +1,4 @@
-import type { DashboardNavItem, DashboardOverview } from "./types";
+import type { DashboardNavItem } from "./types";
 
 export const dashboardNavItems: DashboardNavItem[] = [
   { label: "Dashboard", href: "/dashboard", icon: "dashboard", active: true },
@@ -11,7 +11,7 @@ export const dashboardNavItems: DashboardNavItem[] = [
   { label: "Settings", href: "/settings", icon: "settings" },
 ];
 
-export const dashboardOverview: DashboardOverview = {
+export const dashboardOverview = {
   stats: [
     {
       title: "Sprint Velocity",

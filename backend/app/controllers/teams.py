@@ -10,7 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 
 from app.controllers.common import commit_and_refresh, fetch_one_or_404
-from app.models import Category, Division, Team, TeamMember, Worker
+from app.models import Category, Division, Permission, Team, TeamMember, Worker
 
 
 async def create_team(name: str, category_id: int, description: Optional[str], capacity_hours: float, db: AsyncSession):
@@ -105,6 +105,131 @@ async def get_team_members(team_id: int, db: AsyncSession):
 
 async def get_my_teams():
     return {"teams": []}
+
+
+def _member_role_label(role: str) -> str:
+    normalized = (role or "").lower()
+    if normalized in {"lead", "manager", "admin"}:
+        return "Admin"
+    if normalized == "member":
+        return "Developer"
+    return "Viewer"
+
+
+def _member_status_label(status: str) -> str:
+    normalized = (status or "").lower()
+    if normalized == "active":
+        return "Active"
+    if normalized == "on_leave":
+        return "Pending"
+    return "Inactive"
+
+
+def _member_avatar(name: str) -> str:
+    parts = [part for part in (name or "").split() if part]
+    initials = "".join(part[0] for part in parts[:2]).upper()
+    return initials or "?"
+
+
+def _module_name(resource: str) -> str:
+    return " ".join(part.capitalize() for part in (resource or "").replace("_", " ").split())
+
+
+async def get_team_access_control(team_id: Optional[int], db: AsyncSession):
+    team_stmt = select(Team).order_by(Team.team_id.asc())
+    teams_result = await db.execute(team_stmt)
+    teams = list(teams_result.scalars().all())
+
+    if not teams:
+        return {
+            "team": None,
+            "teams": [],
+            "members": [],
+            "total_members": 0,
+            "permissions": [],
+            "notice": "No teams available yet.",
+        }
+
+    selected_team = next((team for team in teams if team.team_id == team_id), None) if team_id else teams[0]
+    notice = None
+    if team_id and selected_team is None:
+        selected_team = teams[0]
+        notice = "Requested team was not found. Showing the first available team instead."
+
+    member_stmt = (
+        select(TeamMember, Worker)
+        .join(Worker, TeamMember.worker_id == Worker.worker_id)
+        .where(TeamMember.team_id == selected_team.team_id)
+        .order_by(TeamMember.team_member_id.asc())
+    )
+    members_result = await db.execute(member_stmt)
+    member_rows = members_result.all()
+
+    team_member_counts: dict[int, int] = {}
+    count_stmt = select(TeamMember.team_id, TeamMember.team_member_id)
+    count_result = await db.execute(count_stmt)
+    for team_member_team_id, _ in count_result.all():
+        team_member_counts[team_member_team_id] = team_member_counts.get(team_member_team_id, 0) + 1
+
+    permission_stmt = select(Permission).order_by(Permission.resource.asc(), Permission.action.asc())
+    permission_result = await db.execute(permission_stmt)
+    permissions = permission_result.scalars().all()
+
+    module_permissions = {}
+    for permission in permissions:
+        key = permission.resource
+        module = module_permissions.setdefault(
+            key,
+            {
+                "id": key,
+                "name": _module_name(permission.resource),
+                "read": False,
+                "write": False,
+                "delete": False,
+            },
+        )
+
+        action = (permission.action or "").lower()
+        if action == "read":
+            module["read"] = True
+        elif action in {"create", "update", "write"}:
+            module["write"] = True
+        elif action == "delete":
+            module["delete"] = True
+
+    def build_team_summary(team: Team):
+        return {
+            "team_id": team.team_id,
+            "name": team.name,
+            "description": team.description,
+            "category_id": team.category_id,
+            "status": team.status,
+            "capacity_hours": team.capacity_hours,
+            "member_count": team_member_counts.get(team.team_id, 0),
+        }
+
+    members = []
+    for team_member, worker in member_rows:
+        members.append(
+            {
+                "id": str(team_member.team_member_id),
+                "name": worker.full_name,
+                "email": worker.email,
+                "role": _member_role_label(team_member.role),
+                "status": _member_status_label(worker.employment_status),
+                "avatar": _member_avatar(worker.full_name),
+                "joinDate": team_member.join_date,
+            }
+        )
+
+    return {
+        "team": build_team_summary(selected_team),
+        "teams": [build_team_summary(team) for team in teams],
+        "members": members,
+        "total_members": len(members),
+        "permissions": list(module_permissions.values()),
+        "notice": notice,
+    }
 
 
 async def create_division(name: str, description: Optional[str], db: AsyncSession):

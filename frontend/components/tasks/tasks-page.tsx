@@ -6,6 +6,7 @@ import type { SprintTasks, TaskCard } from "@/lib/tasks/types";
 
 type TasksPageProps = {
   tasks: SprintTasks;
+  notice?: string | null;
 };
 
 function PriorityBadge({ priority }: { priority: string }) {
@@ -114,10 +115,20 @@ function KanbanColumn({
   );
 }
 
-export function TasksPage({ tasks }: TasksPageProps) {
+export function TasksPage({ tasks, notice }: TasksPageProps) {
+  const title = tasks.sprintNumber
+    ? `Sprint ${tasks.sprintNumber}: ${tasks.sprintTitle}`
+    : tasks.sprintTitle;
+
   return (
-    <AppLayout title={`Sprint ${tasks.sprintNumber}: ${tasks.sprintTitle}`}>
+    <AppLayout title={title}>
       <div className="h-full flex flex-col space-y-6">
+        {notice ? (
+          <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-[14px] font-medium text-amber-800">
+            {notice}
+          </div>
+        ) : null}
+
         {/* Header Extra Info */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="flex flex-wrap items-center gap-4 text-[14px] font-medium text-slate-500">
@@ -125,8 +136,10 @@ export function TasksPage({ tasks }: TasksPageProps) {
               📅 {tasks.dateRange}
             </span>
             <a
-              href="#"
+              href={tasks.repositoryHref ?? "#"}
               className="flex items-center gap-2 text-[#4338ca] hover:bg-[#4338ca] hover:text-white transition-colors bg-white px-3 py-1.5 rounded-xl border border-slate-200 shadow-sm font-bold"
+              target={tasks.repositoryHref ? "_blank" : undefined}
+              rel={tasks.repositoryHref ? "noreferrer" : undefined}
             >
               🔗 {tasks.repositoryLink}
             </a>

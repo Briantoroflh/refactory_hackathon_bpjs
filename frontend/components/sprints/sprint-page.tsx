@@ -3,9 +3,8 @@
 import dynamic from "next/dynamic";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { AppLayout } from "@/components/layout/app-layout";
-import { createTaskFromInput, moveTaskToStatus } from "@/lib/sprints/board";
-import { fetchSprintBoardData } from "@/lib/sprints/api";
-import { sprintBoardMockData } from "@/lib/sprints/mock-data";
+import { createSprintTask, fetchSprintBoardData, sprintSidebarItems, updateTaskStatus } from "@/lib/sprints/api";
+import { moveTaskToStatus } from "@/lib/sprints/board";
 import {
   createMembersMap,
   filterTasks,
@@ -49,51 +48,91 @@ const defaultFilters: SprintFilterState = {
 
 export function SprintPage() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [boardData, setBoardData] = useState<SprintBoardData>(sprintBoardMockData);
+  const [boardData, setBoardData] = useState<SprintBoardData | null>(null);
   const [filters, setFilters] = useState<SprintFilterState>(defaultFilters);
   const [draggingTaskId, setDraggingTaskId] = useState<string | null>(null);
   const [showTaskModal, setShowTaskModal] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isCreatingSprint, setIsCreatingSprint] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const projectId = 3;
+
+  const loadBoardData = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const data = await fetchSprintBoardData(projectId);
+      setBoardData(data);
+      setError(null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to load sprint data");
+    } finally {
+      setIsLoading(false);
+    }
+  }, [projectId]);
 
   useEffect(() => {
-    let isMounted = true;
+    let active = true;
 
-    async function syncBoardData() {
-      setIsLoading(true);
-
+    const run = async () => {
       try {
-        const data = await fetchSprintBoardData();
-        if (isMounted) {
-          setBoardData(data);
-        }
-      } catch {
-        if (isMounted) {
-          setBoardData(sprintBoardMockData);
-        }
+        const data = await fetchSprintBoardData(projectId);
+        if (!active) return;
+        setBoardData(data);
+        setError(null);
+      } catch (err) {
+        if (!active) return;
+        setError(err instanceof Error ? err.message : "Failed to load sprint data");
       } finally {
-        if (isMounted) {
+        if (active) {
           setIsLoading(false);
         }
       }
-    }
+    };
 
-    void syncBoardData();
+    run();
+    const timer = window.setInterval(run, 30000);
 
     return () => {
-      isMounted = false;
+      active = false;
+      window.clearInterval(timer);
     };
-  }, []);
+  }, [projectId]);
 
-  const membersMap = useMemo(() => createMembersMap(boardData.members), [boardData.members]);
+  const data = boardData ?? {
+    sprint: {
+      id: "loading",
+      name: "Loading sprint...",
+      projectPath: ["Sprints"],
+      startDateLabel: "",
+      endDateLabel: "",
+      daysRemaining: 0,
+      storyPointGoal: 0,
+    },
+    members: [],
+    stats: [],
+    tasks: [],
+    sidebarItems: sprintSidebarItems,
+    velocity: [],
+    insights: {
+      title: "AI Standup Insight",
+      subtitle: "Waiting for live data",
+      summary: "Sprint data will appear once the backend responds.",
+      alertTitle: "Loading",
+      alertBody: "Connecting to live sprint data.",
+      status: "at_risk" as const,
+    },
+  };
+
+  const membersMap = useMemo(() => createMembersMap(data.members), [data.members]);
 
   // Enhance tasks with pre-calculated metadata for performance
   const enhancedTasks = useMemo(() => {
-    return boardData.tasks.map(task => ({
+    return data.tasks.map((task) => ({
       ...task,
-      dueState: getDueDateState(task.dueDate)
+      dueState: getDueDateState(task.dueDate),
     }));
-  }, [boardData.tasks]);
+  }, [data.tasks]);
 
   const filteredTasks = useMemo(
     () => filterTasks(enhancedTasks, filters, membersMap),
@@ -125,41 +164,80 @@ export function SprintPage() {
 
   const onDropTask = useCallback(
     (status: SprintTaskStatus) => {
-      if (!draggingTaskId) {
+      if (!draggingTaskId || !boardData) {
         return;
       }
 
-      setBoardData((current) => ({
-        ...current,
-        tasks: moveTaskToStatus(current.tasks, draggingTaskId, status),
-      }));
+      const sourceTask = boardData.tasks.find((task) => task.id === draggingTaskId);
+      if (!sourceTask) {
+        return;
+      }
+
+      setBoardData((current) =>
+        current
+          ? {
+              ...current,
+              tasks: moveTaskToStatus(current.tasks, draggingTaskId, status),
+            }
+          : current,
+      );
+
+      void updateTaskStatus(draggingTaskId, status, projectId, sourceTask.version)
+        .then(() => loadBoardData())
+        .catch((err) => {
+          setError(err instanceof Error ? err.message : "Failed to update task status");
+          void loadBoardData();
+        });
+
       setDraggingTaskId(null);
     },
-    [draggingTaskId],
+    [boardData, draggingTaskId, loadBoardData, projectId],
   );
 
-  const onCreateTask = useCallback((input: Parameters<typeof createTaskFromInput>[0]) => {
-    setBoardData((current) => ({
-      ...current,
-      tasks: [...current.tasks, createTaskFromInput(input)],
-    }));
-  }, []);
+  const onCreateTask = useCallback(
+    (input: Parameters<typeof createSprintTask>[0]) => {
+      void createSprintTask(input, projectId)
+        .then(() => loadBoardData())
+        .catch((err) => {
+          setError(err instanceof Error ? err.message : "Failed to create task");
+        });
+    },
+    [loadBoardData, projectId],
+  );
 
   if (isLoading) {
     return <SprintSkeleton />;
   }
 
+  if (!boardData) {
+    return (
+      <AppLayout title="Sprint">
+        <div className="rounded-[24px] border border-rose-200 bg-white p-6 text-slate-700 shadow-[0_12px_28px_rgba(15,23,42,0.05)]">
+          <p className="text-[18px] font-semibold text-slate-800">Gagal memuat sprint</p>
+          <p className="mt-2 text-[14px] leading-6 text-slate-500">{error ?? "Unknown error"}</p>
+          <button
+            type="button"
+            onClick={loadBoardData}
+            className="mt-5 rounded-2xl bg-[#3f2fd6] px-4 py-3 text-[14px] font-semibold text-white"
+          >
+            Coba lagi
+          </button>
+        </div>
+      </AppLayout>
+    );
+  }
+
   return (
     <AppLayout
-      title={boardData.sprint.name}
+      title={data.sprint.name}
       breadcrumbs={[
         { label: "Sprints" },
-        { label: boardData.sprint.name }
+        { label: data.sprint.name },
       ]}
     >
       <div className="space-y-6">
         <SprintOverview
-          sprint={boardData.sprint}
+          sprint={data.sprint}
           progress={progress}
           onOpenCreateTask={() => setShowTaskModal(true)}
           onCreateSprint={() => {
@@ -227,7 +305,7 @@ export function SprintPage() {
 
         <div className="grid gap-6 2xl:grid-cols-[minmax(0,1fr)_340px]">
           <section className="space-y-6">
-            <SprintStatCards stats={stats.length ? stats : boardData.stats} />
+            <SprintStatCards stats={stats.length ? stats : data.stats} />
             {filteredTasks.length ? (
               <div className="bg-white rounded-[28px] border border-slate-200 p-2 shadow-[0_12px_28px_rgba(15,23,42,0.05)]">
                 <KanbanBoard
@@ -251,24 +329,31 @@ export function SprintPage() {
               <div className="border-b border-[#e5def7] px-6 py-5">
                 <div className="flex items-center gap-2">
                   <span className="text-xl">✨</span>
-                  <h3 className="text-[20px] font-bold tracking-tight text-slate-800">
-                    AI Standup Insight
-                  </h3>
+                  <h3 className="text-[20px] font-bold tracking-tight text-slate-800">{data.insights.title}</h3>
                 </div>
-                <p className="text-[13px] font-medium text-slate-500 mt-1">Synthesized 2 hours ago</p>
+                <p className="text-[13px] font-medium text-slate-500 mt-1">{data.insights.subtitle}</p>
               </div>
               <div className="space-y-5 px-6 py-5 text-[15px] leading-relaxed text-slate-600 font-medium">
                 <p>
-                  The team is currently <span className="font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-lg border border-emerald-100">on track</span>{" "}
+                  The team is currently{" "}
+                  <span
+                    className={`font-bold px-2 py-0.5 rounded-lg border ${
+                      data.insights.status === "on_track"
+                        ? "text-emerald-600 bg-emerald-50 border-emerald-100"
+                        : "text-amber-600 bg-amber-50 border-amber-100"
+                    }`}
+                  >
+                    {data.insights.status === "on_track" ? "on track" : "at risk"}
+                  </span>{" "}
                   to meet sprint goals.
                 </p>
                 <div className="rounded-[20px] bg-white border border-[#e5def7] p-4 shadow-sm">
                   <p className="font-bold text-amber-600 flex items-center gap-2">
                     <span className="h-2 w-2 rounded-full bg-amber-500 animate-pulse" />
-                    Review Delay Detected
+                    {data.insights.alertTitle}
                   </p>
                   <p className="text-[13px] text-slate-500 mt-1.5 font-medium">
-                    ENG-390 has been in review for 48 hours. Suggested pairing to expedite.
+                    {data.insights.alertBody}
                   </p>
                 </div>
                 <button className="w-full rounded-2xl bg-[#4338ca] px-4 py-3 text-[14px] font-bold text-white shadow-[0_10px_24px_rgba(67,56,202,0.2)] hover:bg-[#3f2fd6] transition-all">
@@ -280,21 +365,24 @@ export function SprintPage() {
             <section className="rounded-[28px] border border-slate-200 bg-white p-6 shadow-[0_12px_28px_rgba(15,23,42,0.05)]">
               <h3 className="text-[22px] font-bold tracking-tight text-slate-800">Sprint Velocity</h3>
               <div className="mt-5 grid grid-cols-4 text-center text-[12px] font-bold text-slate-400 uppercase tracking-widest px-1">
-                <span>S39</span>
-                <span>S40</span>
-                <span>S41</span>
-                <span className="text-[#4338ca]">S42</span>
+                {data.velocity.map((point, index) => (
+                  <span key={point.label} className={index === data.velocity.length - 1 ? "text-[#4338ca]" : ""}>
+                    {point.label}
+                  </span>
+                ))}
               </div>
               <div className="mt-6 border-t border-slate-100 pt-5 flex items-center justify-between">
                 <span className="text-sm font-bold text-slate-500">Rolling Average</span>
-                <span className="text-[26px] font-bold text-slate-800 tracking-tight">82 pts</span>
+                <span className="text-[26px] font-bold text-slate-800 tracking-tight">
+                  {Math.round(data.velocity.reduce((sum, point) => sum + point.value, 0) / Math.max(data.velocity.length, 1)) || 0} pts
+                </span>
               </div>
             </section>
 
             <section className="rounded-[28px] border border-slate-200 bg-white p-6 shadow-[0_12px_28px_rgba(15,23,42,0.05)]">
               <h3 className="text-[22px] font-bold tracking-tight text-slate-800">Active Team</h3>
               <div className="mt-5 flex -space-x-3 px-1">
-                {boardData.members.map((member) => (
+                {data.members.map((member) => (
                   <span
                     key={member.id}
                     title={member.name}
@@ -312,7 +400,7 @@ export function SprintPage() {
 
       <CreateTaskModal
         open={showTaskModal}
-        members={boardData.members}
+        members={data.members}
         onClose={() => setShowTaskModal(false)}
         onCreate={onCreateTask}
       />

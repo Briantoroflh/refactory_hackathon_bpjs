@@ -1,125 +1,164 @@
 "use client";
 
-import React, { useState, useCallback, useRef, useEffect } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AppLayout } from "@/components/layout/app-layout";
 import { AIContextPanel } from "./ai-context-panel";
 import { AIChatPanel } from "./ai-chat-panel";
-import type { AIMessage, AIDocument, AIContextItem } from "@/lib/ai/types";
-
-const mockDocuments: AIDocument[] = [
-  {
-    id: "doc-1",
-    title: "API v2.4 Spec",
-    updated: "Updated 25 ago",
-    type: "documentation",
-  },
-  {
-    id: "doc-2",
-    title: "SP-402: OAuth Token Refresh",
-    status: "In Review",
-    type: "issue",
-  },
-];
-
-const mockContextItems: AIContextItem[] = [
-  {
-    id: "ctx-1",
-    type: "active",
-    label: "SP-402: OAuth Token Refresh...",
-  },
-];
-
-const mockMessages: AIMessage[] = [
-  {
-    id: "msg-1",
-    type: "user",
-    content:
-      "I'm loaded with the context from the current Sprint. I notice there's a high-priority bug (SP-402) regarding OAuth token refresh. Would you like me to run an initial analysis on the related authentication controllers?",
-  },
-  {
-    id: "msg-2",
-    type: "ai",
-    content:
-      "Yes, please analyze 'authController'. Specifically look at the 'refreshToken' method around line 145.",
-  },
-  {
-    id: "msg-3",
-    type: "ai",
-    content:
-      "Found the issue! The authentication controller has an issue with the refreshToken method. Here's the problematic code:",
-    codeSnippet: {
-      code: `src/controllers/authController.ts
-const { refreshToken } = req.cookies;
-// Bug: Missing static type here
-const response = await authService.verifyRefreshToken(refreshToken);
-
-if (!authorizedPath()) {
-  throw new UnauthorizedError()
-}
-
-// Bug: Missing dynamic state management
-const newAccessToken = generateAccessToken(user_id);`,
-      language: "typescript",
-    },
-  },
-];
+import { fetchAILiveSnapshot, sendAIMessage } from "@/lib/ai/api";
+import type { AIMessage, AILiveSnapshot } from "@/lib/ai/types";
+import { AIPageSkeleton } from "@/components/ai/ai-skeleton";
 
 export function AIPage() {
-  const [messages, setMessages] = useState<AIMessage[]>(mockMessages);
+  const [snapshot, setSnapshot] = useState<AILiveSnapshot | null>(null);
+  const [messages, setMessages] = useState<AIMessage[]>([]);
   const [inputValue, setInputValue] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [sending, setSending] = useState(false);
+  const [notice, setNotice] = useState<string | null>(null);
   const chatEndRef = useRef<HTMLDivElement>(null);
+  const hasUserMessagedRef = useRef(false);
 
-  const scrollToBottom = () => {
+  const scrollToBottom = useCallback(() => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  };
+  }, []);
 
   useEffect(() => {
     scrollToBottom();
-  }, [messages]);
+  }, [messages, scrollToBottom]);
 
-  const handleSendMessage = useCallback(() => {
-    if (!inputValue.trim()) return;
+  useEffect(() => {
+    let active = true;
 
-    const newMessage: AIMessage = {
-      id: `msg-${Date.now()}`,
-      type: "user",
-      content: inputValue,
+    const run = async () => {
+      try {
+        const liveSnapshot = await fetchAILiveSnapshot();
+        if (!active) {
+          return;
+        }
+        setSnapshot(liveSnapshot);
+        if (!hasUserMessagedRef.current) {
+          setMessages(liveSnapshot.messages);
+        }
+        setNotice(liveSnapshot.notice ?? null);
+      } catch (error) {
+        if (!active) {
+          return;
+        }
+        setNotice(error instanceof Error ? error.message : "Failed to load AI context");
+        setSnapshot({
+          documents: [],
+          contextItems: [],
+          messages: [
+            {
+              id: "ai-fallback",
+              type: "ai",
+              content:
+                "Saya belum bisa memuat konteks live sekarang. Silakan coba lagi, atau kirim pertanyaan untuk analisis umum.",
+            },
+          ],
+          requestContext: {},
+        });
+        setMessages([
+          {
+            id: "ai-fallback",
+            type: "ai",
+            content:
+              "Saya belum bisa memuat konteks live sekarang. Silakan coba lagi, atau kirim pertanyaan untuk analisis umum.",
+          },
+        ]);
+      } finally {
+        if (active) {
+          setLoading(false);
+        }
+      }
     };
 
-    setMessages((prev) => [...prev, newMessage]);
-    setInputValue("");
+    run();
+    const timer = window.setInterval(run, 30000);
 
-    // Simulate AI response
-    setTimeout(() => {
-      const aiResponse: AIMessage = {
-        id: `msg-${Date.now()}-ai`,
-        type: "ai",
-        content:
-          "I've analyzed your request. Here are my findings and recommendations...",
-      };
-      setMessages((prev) => [...prev, aiResponse]);
-    }, 1000);
-  }, [inputValue]);
+    return () => {
+      active = false;
+      window.clearInterval(timer);
+    };
+  }, []);
+
+  const liveContext = useMemo(
+    () => snapshot?.requestContext ?? {},
+    [snapshot],
+  );
+
+  const handleSendMessage = useCallback(async () => {
+    const prompt = inputValue.trim();
+    if (!prompt || sending) {
+      return;
+    }
+
+    const userMessage: AIMessage = {
+      id: `msg-${Date.now()}`,
+      type: "user",
+      content: prompt,
+    };
+
+    hasUserMessagedRef.current = true;
+    setMessages((prev) => [...prev, userMessage]);
+    setInputValue("");
+    setSending(true);
+
+    try {
+      const response = await sendAIMessage(prompt, liveContext);
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: `msg-${Date.now()}-ai`,
+          type: "ai",
+          content: response.content,
+          codeSnippet: response.codeSnippet,
+        },
+      ]);
+    } catch (error) {
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: `msg-${Date.now()}-error`,
+          type: "ai",
+          content:
+            error instanceof Error
+              ? error.message
+              : "AI assistant request failed.",
+        },
+      ]);
+    } finally {
+      setSending(false);
+    }
+  }, [inputValue, liveContext, sending]);
+
+  if (loading && !snapshot) {
+    return <AIPageSkeleton />;
+  }
 
   return (
     <AppLayout title="AI Assistant">
       <div className="grid h-full gap-6 lg:grid-cols-[minmax(0,1fr)_340px]">
-        {/* Chat Panel */}
-        <div className="bg-white rounded-[28px] border border-slate-200 shadow-[0_12px_28px_rgba(15,23,42,0.05)] overflow-hidden flex flex-col h-[calc(100vh-180px)]">
+        <div className="flex h-[calc(100vh-180px)] flex-col overflow-hidden rounded-[28px] border border-slate-200 bg-white shadow-[0_12px_28px_rgba(15,23,42,0.05)]">
+          {notice ? (
+            <div className="border-b border-amber-200 bg-amber-50 px-5 py-3 text-[14px] font-medium text-amber-800">
+              {notice}
+            </div>
+          ) : null}
           <AIChatPanel
             messages={messages}
             onSendMessage={handleSendMessage}
             inputValue={inputValue}
             onInputChange={setInputValue}
             chatEndRef={chatEndRef}
+            loading={sending}
           />
         </div>
 
-        {/* Context Panel */}
         <div className="space-y-6 overflow-y-auto">
           <AIContextPanel
-            documents={mockDocuments}
-            contextItems={mockContextItems}
+            documents={snapshot?.documents ?? []}
+            contextItems={snapshot?.contextItems ?? []}
           />
         </div>
       </div>

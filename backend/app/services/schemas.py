@@ -242,6 +242,47 @@ class TeamResponse(BaseModel):
         from_attributes = True
 
 
+class TeamAccessMemberResponse(BaseModel):
+    """Team member response for access control dashboard."""
+    id: str
+    name: str
+    email: str
+    role: str
+    status: str
+    avatar: str
+    joinDate: Optional[str] = None
+
+
+class ModulePermissionResponse(BaseModel):
+    """Module permission response."""
+    id: str
+    name: str
+    read: bool = False
+    write: bool = False
+    delete: bool = False
+
+
+class TeamAccessSummaryResponse(BaseModel):
+    """Team summary used by access control dashboard."""
+    team_id: int
+    name: str
+    description: Optional[str]
+    category_id: int
+    status: str
+    capacity_hours: float
+    member_count: int = 0
+
+
+class TeamAccessControlResponse(BaseModel):
+    """Aggregated team access control dashboard response."""
+    team: Optional[TeamAccessSummaryResponse] = None
+    teams: List[TeamAccessSummaryResponse] = Field(default_factory=list)
+    members: List[TeamAccessMemberResponse] = Field(default_factory=list)
+    total_members: int = 0
+    permissions: List[ModulePermissionResponse] = Field(default_factory=list)
+    notice: Optional[str] = None
+
+
 # ============= Worker Schemas =============
 
 class WorkerCreateRequest(BaseModel):

@@ -11,6 +11,7 @@ type AIChatPanelProps = {
   inputValue: string;
   onInputChange: (value: string) => void;
   chatEndRef: RefObject<HTMLDivElement | null>;
+  loading?: boolean;
 };
 
 export function AIChatPanel({
@@ -19,6 +20,7 @@ export function AIChatPanel({
   inputValue,
   onInputChange,
   chatEndRef,
+  loading,
 }: AIChatPanelProps) {
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" && !e.shiftKey) {
@@ -64,6 +66,13 @@ export function AIChatPanel({
             </div>
           </div>
         ))}
+        {loading ? (
+          <div className="flex justify-start">
+            <div className="max-w-2xl rounded-2xl border border-slate-200 bg-slate-50 px-5 py-4 text-sm text-slate-600">
+              Bloom AI sedang memproses konteks live...
+            </div>
+          </div>
+        ) : null}
         <div ref={chatEndRef} />
       </div>
 
@@ -80,7 +89,7 @@ export function AIChatPanel({
           />
           <button
             onClick={onSendMessage}
-            disabled={!inputValue.trim()}
+            disabled={!inputValue.trim() || loading}
             className="flex items-center justify-center rounded-2xl bg-indigo-600 p-3 text-white hover:bg-indigo-700 transition disabled:opacity-50 disabled:cursor-not-allowed h-fit"
             aria-label="Send message"
           >

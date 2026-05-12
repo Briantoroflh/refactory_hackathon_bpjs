@@ -1,4 +1,5 @@
 import type { LoginFormValues } from "./validation";
+import { clearStoredAuthToken, getStoredAuthToken, setStoredAuthToken } from "./storage";
 
 export type LoginRequest = {
   email: string;
@@ -43,9 +44,6 @@ const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "") ??
   "http://localhost:8000";
 
-const AUTH_STORAGE_KEY =
-  process.env.NEXT_PUBLIC_AUTH_STORAGE_KEY ?? "access_token";
-
 export async function login(values: LoginFormValues): Promise<LoginResponse> {
   const response = await fetch(`${API_BASE_URL}/auth/login`, {
     method: "POST",
@@ -70,7 +68,7 @@ export async function login(values: LoginFormValues): Promise<LoginResponse> {
 
   // Store token in localStorage
   if (typeof window !== "undefined") {
-    localStorage.setItem(AUTH_STORAGE_KEY, backendData.access_token);
+    setStoredAuthToken(backendData.access_token);
     if (backendData.refresh_token) {
       localStorage.setItem("refresh_token", backendData.refresh_token);
     }
@@ -90,16 +88,13 @@ export async function login(values: LoginFormValues): Promise<LoginResponse> {
 
 export function logout(): void {
   if (typeof window !== "undefined") {
-    localStorage.removeItem(AUTH_STORAGE_KEY);
+    clearStoredAuthToken();
     localStorage.removeItem("refresh_token");
   }
 }
 
 export function getStoredToken(): string | null {
-  if (typeof window !== "undefined") {
-    return localStorage.getItem(AUTH_STORAGE_KEY);
-  }
-  return null;
+  return getStoredAuthToken();
 }
 
 export function isAuthenticated(): boolean {

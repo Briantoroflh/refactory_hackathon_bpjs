@@ -33,22 +33,36 @@ type DashboardShellProps = {
 };
 
 export function DashboardShell({ overview }: DashboardShellProps) {
+  const sprint = overview.sprint ?? {
+    title: "Active Work Progress",
+    subtitle: "Waiting for live data",
+    bars: [],
+  };
+  const profile = overview.profile ?? {
+    name: "Dashboard",
+    title: "Realtime overview",
+    projects: 0,
+    team: 0,
+  };
+  const stats = overview.stats ?? [];
+  const notifications = overview.notifications ?? [];
+
   return (
     <AppLayout title="Dashboard Overview">
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1.55fr)_minmax(300px,0.9fr)]">
         <section className="space-y-6">
-          <StatsGrid stats={overview.stats} />
+          <StatsGrid stats={stats} />
           <div className="grid gap-6 lg:grid-cols-[minmax(0,1.6fr)_minmax(280px,0.75fr)]">
             <SprintChartCard
-              title={overview.sprint.title}
-              subtitle={overview.sprint.subtitle}
-              bars={overview.sprint.bars}
+              title={sprint.title}
+              subtitle={sprint.subtitle}
+              bars={sprint.bars}
             />
-            <NotificationsPanel notifications={overview.notifications} />
+            <NotificationsPanel notifications={notifications} />
           </div>
         </section>
         <aside className="space-y-6">
-          <ProfileCard />
+          <ProfileCard profile={profile} updatedAt={overview.generatedAt ?? new Date().toISOString()} />
           <AIModulePanel />
         </aside>
       </div>
@@ -207,9 +221,11 @@ function SprintChartCard({
   subtitle: string;
   bars: DashboardOverview["sprint"]["bars"];
 }) {
-  return (
-    <section className="overflow-hidden rounded-[24px] border border-slate-200 bg-white shadow-[0_12px_28px_rgba(15,23,42,0.05)]">
-      <div className="flex flex-col gap-4 border-b border-slate-200 px-5 py-5 sm:flex-row sm:items-center sm:justify-between sm:px-6">
+const maxValue = Math.max(...bars.map((bar) => bar.value), 0);
+
+return (
+  <section className="overflow-hidden rounded-[24px] border border-slate-200 bg-white shadow-[0_12px_28px_rgba(15,23,42,0.05)]">
+    <div className="flex flex-col gap-4 border-b border-slate-200 px-5 py-5 sm:flex-row sm:items-center sm:justify-between sm:px-6">
         <div>
           <h2 className="text-[22px] font-semibold tracking-[-0.03em] text-slate-800 sm:text-[24px]">{title}</h2>
           <p className="text-[14px] text-slate-500 sm:text-[15px]">{subtitle}</p>
@@ -227,7 +243,9 @@ function SprintChartCard({
                   className={`w-full max-w-[106px] rounded-t-[4px] ${
                     bar.active ? "bg-[#3f2fd6]" : "bg-[#e8e4f6]"
                   }`}
-                  style={{ height: `${Math.max(bar.value, 12)}%` }}
+                  style={{
+                    height: `${maxValue > 0 ? Math.max((bar.value / maxValue) * 100, 12) : 12}%`,
+                  }}
                 />
               </div>
               <span className={`text-[13px] font-medium sm:text-[14px] ${bar.active ? "text-[#3f2fd6]" : "text-slate-600"}`}>
@@ -282,20 +300,29 @@ function NotificationCard({ notification }: { notification: NotificationItem }) 
   );
 }
 
-function ProfileCard() {
+function ProfileCard({
+  profile,
+  updatedAt,
+}: {
+  profile: DashboardOverview["profile"];
+  updatedAt: string;
+}) {
   return (
     <section className="rounded-[24px] border border-slate-200 bg-white p-5 shadow-[0_12px_28px_rgba(15,23,42,0.05)]">
       <div className="flex items-center gap-4">
         <div className="h-14 w-14 rounded-full bg-[radial-gradient(circle_at_35%_35%,#334155,#0f172a)]" />
         <div className="min-w-0">
-          <p className="text-[18px] font-semibold tracking-[-0.02em] text-slate-800">Jordan Lee</p>
-          <p className="text-[14px] text-slate-500">Engineering Manager</p>
+          <p className="text-[18px] font-semibold tracking-[-0.02em] text-slate-800">{profile.name}</p>
+          <p className="text-[14px] text-slate-500">{profile.title}</p>
         </div>
       </div>
       <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-1">
-        <MiniStat label="Projects" value="12" />
-        <MiniStat label="Team" value="24" />
+        <MiniStat label="Projects" value={String(profile.projects)} />
+        <MiniStat label="Team" value={String(profile.team)} />
       </div>
+      <p className="mt-4 text-[12px] font-medium uppercase tracking-[0.16em] text-slate-400">
+        Updated {new Date(updatedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+      </p>
     </section>
   );
 }

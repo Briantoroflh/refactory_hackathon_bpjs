@@ -26,7 +26,7 @@ export function AIContextPanel({
             Documents
           </p>
           <div className="mt-3 space-y-2">
-            {documents.map((doc) => (
+            {documents.length ? documents.map((doc) => (
               <div
                 key={doc.id}
                 className="rounded-lg border border-slate-200 bg-slate-50 p-3 hover:bg-slate-100 transition cursor-pointer"
@@ -51,7 +51,11 @@ export function AIContextPanel({
                   </span>
                 </div>
               </div>
-            ))}
+            )) : (
+              <p className="rounded-lg border border-dashed border-slate-200 bg-slate-50 px-3 py-4 text-sm text-slate-500">
+                No live documents loaded yet.
+              </p>
+            )}
           </div>
         </div>
 
@@ -61,7 +65,7 @@ export function AIContextPanel({
             Active Items
           </p>
           <div className="mt-3 space-y-2">
-            {contextItems.map((item) => (
+            {contextItems.length ? contextItems.map((item) => (
               <div
                 key={item.id}
                 className={`rounded-lg border px-3 py-3 ${
@@ -77,7 +81,11 @@ export function AIContextPanel({
                   </p>
                 </div>
               </div>
-            ))}
+            )) : (
+              <p className="rounded-lg border border-dashed border-slate-200 bg-slate-50 px-3 py-4 text-sm text-slate-500">
+                No active context loaded yet.
+              </p>
+            )}
           </div>
         </div>
       </div>

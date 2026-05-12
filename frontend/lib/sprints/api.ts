@@ -1,67 +1,96 @@
-import { sprintBoardMockData } from "./mock-data";
-import type { CreateTaskInput, SprintBoardData, SprintTaskStatus } from "./types";
 import { apiClient } from "@/lib/api/client";
+import type {
+  CreateTaskInput,
+  SprintBoardData,
+  SprintSidebarItem,
+  SprintTask,
+  SprintTaskStatus,
+} from "./types";
 
-// Default project to attach sprint to (user selected)
 const DEFAULT_PROJECT_ID = 3;
 
-// Simple in-memory cache
-let boardDataCache: SprintBoardData | null = null;
-let lastFetchTime = 0;
-const CACHE_TTL = 30000; // 30 seconds
+export const sprintSidebarItems: SprintSidebarItem[] = [
+  { label: "Dashboard", href: "/dashboard", icon: "dashboard" },
+  { label: "Project", href: "/projects", icon: "project" },
+  { label: "Sprint", href: "/sprints", icon: "sprint", active: true },
+  { label: "Tasks", href: "/tasks", icon: "tasks" },
+  { label: "Analytics", href: "/analytics", icon: "analytics" },
+  { label: "AI Assistant", href: "/ai", icon: "ai" },
+  { label: "Team", href: "/team", icon: "team" },
+  { label: "Settings", href: "/settings", icon: "settings" },
+];
+
+function sprintStatusToBackend(status: SprintTaskStatus) {
+  const mapping: Record<SprintTaskStatus, string> = {
+    todo: "backlog",
+    in_progress: "in_progress",
+    review: "in_review",
+    done: "completed",
+  };
+
+  return mapping[status];
+}
+
+function backendStatusToSprint(status: string): SprintTaskStatus {
+  const mapping: Record<string, SprintTaskStatus> = {
+    backlog: "todo",
+    in_progress: "in_progress",
+    in_review: "review",
+    completed: "done",
+    closed: "done",
+  };
+
+  return mapping[status] ?? "todo";
+}
+
+function normalizeTask(task: Record<string, unknown>): SprintTask {
+  const assigneeIds = Array.isArray(task.assigneeIds)
+    ? (task.assigneeIds as string[])
+    : Array.isArray(task.assignee_ids)
+      ? (task.assignee_ids as string[])
+      : task.assigned_to
+        ? [String(task.assigned_to)]
+        : [];
+
+  return {
+    id: String(task.id ?? task.task_id),
+    title: String(task.title ?? "Untitled"),
+    status: backendStatusToSprint(String(task.status ?? "backlog")),
+    priority: String(task.priority ?? "medium") as SprintTask["priority"],
+    dueDate: String(task.dueDate ?? task.deadline ?? ""),
+    storyPoints: Number(task.storyPoints ?? task.story_points ?? 0),
+    tags: Array.isArray(task.tags) ? (task.tags as string[]) : ["General"],
+    assigneeIds,
+    version: Number(task.version ?? 1),
+  };
+}
 
 export async function fetchSprintBoardData(projectId: number = DEFAULT_PROJECT_ID): Promise<SprintBoardData> {
-  const now = Date.now();
-  
-  if (boardDataCache && now - lastFetchTime < CACHE_TTL) {
-    return boardDataCache;
-  }
+  const payload = await apiClient.get<{
+    sprint: SprintBoardData["sprint"];
+    members: SprintBoardData["members"];
+    stats: SprintBoardData["stats"];
+    tasks: Array<Record<string, unknown>>;
+    velocity: SprintBoardData["velocity"];
+    insights: SprintBoardData["insights"];
+  }>(`/projects/${projectId}/sprint-overview`);
 
-  try {
-    // Fetch tasks from backend for the selected project and map into sprint board shape
-    const tasksResponse = await apiClient.get<any>(`/projects/${projectId}/tasks`);
-    // apiClient returns the JSON from backend; unwrap if it's enveloped
-    const payload = (tasksResponse && tasksResponse.data) ? tasksResponse.data : tasksResponse;
-
-    // Map tasks to sprint board minimal structure
-    const tasks = Array.isArray(payload)
-      ? payload.map((t: any) => ({
-          id: String(t.task_id || t.id),
-          title: t.title || t.name || "Untitled",
-          status: (t.status ?? "todo") as SprintTaskStatus,
-          priority: t.priority ?? "medium",
-          dueDate: t.deadline ?? null,
-          storyPoints: t.story_points ?? t.storyPoints ?? 0,
-          tags: t.tags ?? [],
-          assigneeIds: t.assigned_to ? [String(t.assigned_to)] : [],
-        }))
-      : [];
-
-    const data: SprintBoardData = {
-      sprint: {
-        id: `project-${projectId}-sprint`,
-        name: `Project ${projectId} Active Sprint`,
-        projectPath: ["Projects", `Project ${projectId}`],
-        startDateLabel: "",
-        endDateLabel: "",
-        daysRemaining: 0,
-        storyPointGoal: tasks.reduce((s, t) => s + (t.storyPoints || 0), 0),
-      },
-      members: [], // backend doesn't expose sprint members yet
-      stats: [],
-      tasks,
-      sidebarItems: sprintBoardMockData.sidebarItems,
-    };
-
-    boardDataCache = data;
-    lastFetchTime = now;
-    return data;
-  } catch (error) {
-    if (process.env.NODE_ENV === 'development') {
-      console.warn("Backend sync failed. Using local data fallback.");
-    }
-    return boardDataCache ?? sprintBoardMockData;
-  }
+  return {
+    sprint: payload.sprint,
+    members: payload.members ?? [],
+    stats: payload.stats ?? [],
+    tasks: (payload.tasks ?? []).map(normalizeTask),
+    sidebarItems: sprintSidebarItems,
+    velocity: payload.velocity ?? [],
+    insights: payload.insights ?? {
+      title: "AI Standup Insight",
+      subtitle: "Live sprint summary",
+      summary: "No sprint insight available yet.",
+      alertTitle: "No Active Data",
+      alertBody: "Create tasks to populate sprint insights.",
+      status: "at_risk",
+    },
+  };
 }
 
 export async function createSprint(payload: {
@@ -70,21 +99,45 @@ export async function createSprint(payload: {
   endDate: string;
   goalPoints: number;
 }) {
-  // Backend doesn't have sprint model; return client-side id for now
   return { id: `local-${Date.now()}` };
 }
 
 export async function createSprintTask(payload: CreateTaskInput, projectId: number = DEFAULT_PROJECT_ID) {
-  // Create task in project via backend
-  const response = await apiClient.post<any>(`/projects/${projectId}/tasks`, payload);
-  const payloadResp = (response && response.data) ? response.data : response;
-  return { id: String(payloadResp.task_id || payloadResp.id) };
+  const response = await apiClient.post<Record<string, unknown>>(`/projects/${projectId}/tasks`, {
+    title: payload.title,
+    description: payload.tags.length ? payload.tags.join(", ") : "",
+    story_points: payload.storyPoints,
+    assigned_to: payload.assigneeIds[0] ? Number(payload.assigneeIds[0]) : undefined,
+    priority: payload.priority,
+    deadline: payload.dueDate,
+  });
+
+  const createdTask = normalizeTask(response);
+  if (createdTask.status !== payload.status) {
+    await updateTaskStatus(createdTask.id, payload.status, projectId, createdTask.version);
+  }
+
+  return { id: createdTask.id, version: createdTask.version };
 }
 
-export async function updateTaskStatus(taskId: string, status: SprintTaskStatus, projectId: number = DEFAULT_PROJECT_ID, version?: number) {
-  // Use project-scoped update endpoint
-  const body: any = { status };
-  if (typeof version !== 'undefined') body.version = version;
-  await apiClient.patch(`/projects/${projectId}/tasks/${taskId}/status`, body);
-}
+export async function updateTaskStatus(
+  taskId: string,
+  status: SprintTaskStatus,
+  projectId: number = DEFAULT_PROJECT_ID,
+  version?: number,
+) {
+  const body: Record<string, unknown> = {
+    status: sprintStatusToBackend(status),
+  };
 
+  if (typeof version !== "undefined") {
+    body.version = version;
+  }
+
+  const response = await apiClient.patch<Record<string, unknown>>(
+    `/projects/${projectId}/tasks/${taskId}/status`,
+    body,
+  );
+
+  return normalizeTask(response);
+}

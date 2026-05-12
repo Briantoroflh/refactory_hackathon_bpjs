@@ -20,9 +20,11 @@ export interface TaskColumn {
 }
 
 export interface SprintTasks {
-  sprintNumber: number;
+  sprintNumber?: number;
   sprintTitle: string;
   dateRange: string;
   repositoryLink: string;
+  repositoryHref?: string;
   columns: TaskColumn[];
+  generatedAt?: string;
 }

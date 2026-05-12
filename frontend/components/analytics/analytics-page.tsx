@@ -1,6 +1,4 @@
 "use client";
-
-import { useState } from "react";
 import { AppLayout } from "@/components/layout/app-layout";
 import type {
   TeamAnalytics,
@@ -10,6 +8,7 @@ import type {
 
 type AnalyticsPageProps = {
   analytics: TeamAnalytics;
+  notice?: string | null;
 };
 
 function PerformanceMetrics({ score }: { score: number }) {
@@ -147,8 +146,10 @@ function AIInsightCard({ insight }: { insight: AIInsight }) {
   );
 }
 
-export function AnalyticsPage({ analytics }: AnalyticsPageProps) {
-  const sprintInfo = `Sprint ${analytics.sprintNumber} • ${analytics.quarter} ${analytics.year} Analytics`;
+export function AnalyticsPage({ analytics, notice }: AnalyticsPageProps) {
+  const sprintInfo =
+    analytics.sprintLabel ??
+    `Sprint ${analytics.sprintNumber} • ${analytics.quarter} ${analytics.year} Analytics`;
   const breadcrumbs = [
     { label: "Team Analytics" },
     { label: sprintInfo }
@@ -157,6 +158,12 @@ export function AnalyticsPage({ analytics }: AnalyticsPageProps) {
   return (
     <AppLayout title="Team Performance" breadcrumbs={breadcrumbs}>
       <div className="space-y-6">
+        {notice ? (
+          <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-[14px] font-medium text-amber-800">
+            {notice}
+          </div>
+        ) : null}
+
         {/* Sprint Info / Header Extra */}
         <div className="flex items-center justify-between gap-4 -mt-2 mb-2">
           <p className="text-[16px] font-medium text-slate-500">{sprintInfo}</p>

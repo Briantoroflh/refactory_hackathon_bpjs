@@ -37,7 +37,16 @@ export type NotificationItem = {
   tone: "info" | "warning" | "success";
 };
 
+export type DashboardProfile = {
+  name: string;
+  title: string;
+  projects: number;
+  team: number;
+};
+
 export type DashboardOverview = {
+  generatedAt: string;
+  profile: DashboardProfile;
   stats: StatCard[];
   sprint: {
     title: string;

@@ -18,6 +18,7 @@ export type SprintTask = {
   storyPoints: number;
   tags: string[];
   assigneeIds: string[];
+  version?: number;
   dueState?: {
     label: string;
     tone: "neutral" | "warning" | "danger";
@@ -62,6 +63,16 @@ export type SprintBoardData = {
   stats: SprintStat[];
   tasks: SprintTask[];
   sidebarItems: SprintSidebarItem[];
+  velocity: Array<{ label: string; value: number }>;
+  insights: {
+    title: string;
+    subtitle: string;
+    summary: string;
+    alertTitle: string;
+    alertBody: string;
+    status: "on_track" | "at_risk";
+  };
+  generatedAt?: string;
 };
 
 export type SprintFilterState = {
@@ -79,4 +90,3 @@ export type CreateTaskInput = {
   tags: string[];
   assigneeIds: string[];
 };
-

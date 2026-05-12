@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List, Optional
 from app.databases import get_db
-from app.services.schemas import TeamResponse, WorkerResponse
+from app.services.schemas import TeamResponse, TeamAccessControlResponse, WorkerResponse
 from app.controllers.teams import (
     add_team_member as controller_add_team_member,
     create_category as controller_create_category,
@@ -13,6 +13,7 @@ from app.controllers.teams import (
     create_team as controller_create_team,
     get_my_teams as controller_get_my_teams,
     get_team as controller_get_team,
+    get_team_access_control as controller_get_team_access_control,
     get_team_members as controller_get_team_members,
     list_categories as controller_list_categories,
     list_divisions as controller_list_divisions,
@@ -159,6 +160,16 @@ async def get_my_teams(
     TODO: Filter by current user from JWT token
     """
     return await controller_get_my_teams()
+
+
+@router.get("/access-control", response_model=TeamAccessControlResponse)
+async def get_team_access_control(
+    team_id: Optional[int] = None,
+    db: AsyncSession = Depends(get_db),
+    _: None = Depends(require_auth),
+):
+    """Get live team access control dashboard data."""
+    return await controller_get_team_access_control(team_id, db)
 
 
 # Division endpoints

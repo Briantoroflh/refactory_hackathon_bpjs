@@ -94,5 +94,18 @@ export const sprintBoardMockData: SprintBoardData = {
     { label: "Team", href: "/team", icon: "team" },
     { label: "Settings", href: "/settings", icon: "settings" },
   ],
+  velocity: [
+    { label: "S39", value: 18 },
+    { label: "S40", value: 24 },
+    { label: "S41", value: 19 },
+    { label: "S42", value: 27 },
+  ],
+  insights: {
+    title: "AI Standup Insight",
+    subtitle: "Synthesized 2 hours ago",
+    summary: "The team is currently on track to meet sprint goals.",
+    alertTitle: "Review Delay Detected",
+    alertBody: "ENG-390 has been in review for 48 hours. Suggested pairing to expedite.",
+    status: "on_track",
+  },
 };
-

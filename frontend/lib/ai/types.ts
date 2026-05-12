@@ -29,3 +29,11 @@ export type AIState = {
   loading: boolean;
   error: string | null;
 };
+
+export type AILiveSnapshot = {
+  documents: AIDocument[];
+  contextItems: AIContextItem[];
+  messages: AIMessage[];
+  requestContext: Record<string, unknown>;
+  notice?: string;
+};

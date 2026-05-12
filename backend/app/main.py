@@ -207,6 +207,7 @@ def create_app() -> FastAPI:
     from app.routes.teams import router as teams_router, divisions_router, categories_router
     from app.routes.workers import router as workers_router, kpi_router
     from app.routes.commits import router as commits_router
+    from app.routes.dashboard import router as dashboard_router
     from app.routes.audit import router as audit_router
     from app.routes.assistant import router as assistant_router
     
@@ -222,6 +223,7 @@ def create_app() -> FastAPI:
     app.include_router(workers_router)
     app.include_router(kpi_router)
     app.include_router(commits_router)
+    app.include_router(dashboard_router)
     app.include_router(audit_router)
     app.include_router(assistant_router)
 

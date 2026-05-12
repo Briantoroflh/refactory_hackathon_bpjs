@@ -1,6 +1,7 @@
 import { useState, useCallback } from "react";
 import { apiClient } from "./client";
 import type { LoginFormValues } from "@/lib/auth/validation";
+import { clearStoredAuthToken, getStoredAuthToken, setStoredAuthToken } from "@/lib/auth/storage";
 
 export type UserResponse = {
   user_id: number;
@@ -40,7 +41,7 @@ export const authAPI = {
 
   logout: () => {
     if (typeof window !== "undefined") {
-      localStorage.removeItem("access_token");
+      clearStoredAuthToken();
       localStorage.removeItem("refresh_token");
     }
   },
@@ -66,10 +67,7 @@ export function useAuth() {
   const getCurrentUser = useCallback(async () => {
     setState((s) => ({ ...s, loading: true, error: null }));
     try {
-      const token =
-        typeof window !== "undefined"
-          ? localStorage.getItem("access_token")
-          : null;
+      const token = getStoredAuthToken();
 
       if (!token) {
         setState((s) => ({
@@ -134,6 +132,12 @@ export function useLazyLogin() {
     setState({ data: null, loading: true, error: null });
     try {
       const response = await authAPI.login(credentials);
+      if (typeof window !== "undefined") {
+        setStoredAuthToken(response.access_token);
+        if (response.refresh_token) {
+          localStorage.setItem("refresh_token", response.refresh_token);
+        }
+      }
       setState({ data: response, loading: false, error: null });
       return response;
     } catch (error) {
@@ -164,6 +168,12 @@ export function useLazyRegister() {
     setState({ data: null, loading: true, error: null });
     try {
       const response = await authAPI.register(data);
+      if (typeof window !== "undefined") {
+        setStoredAuthToken(response.access_token);
+        if (response.refresh_token) {
+          localStorage.setItem("refresh_token", response.refresh_token);
+        }
+      }
       setState({ data: response, loading: false, error: null });
       return response;
     } catch (error) {

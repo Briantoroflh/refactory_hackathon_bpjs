@@ -1,4 +1,25 @@
+import { getStoredAuthToken } from "@/lib/auth/storage";
+
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+
+type ApiEnvelope<T> = {
+  status: string;
+  message: string;
+  data: T;
+};
+
+function unwrapEnvelope<T>(payload: unknown): T {
+  if (
+    typeof payload === "object" &&
+    payload !== null &&
+    "status" in payload &&
+    "data" in payload
+  ) {
+    return (payload as ApiEnvelope<T>).data;
+  }
+
+  return payload as T;
+}
 
 export const apiClient = {
   async request<T>(endpoint: string, options?: RequestInit): Promise<T> {
@@ -24,10 +45,7 @@ export const apiClient = {
     }
 
     // Add auth token if available
-    const token =
-      typeof window !== "undefined"
-        ? localStorage.getItem("access_token")
-        : null;
+    const token = getStoredAuthToken();
     if (token) {
       headers["Authorization"] = `Bearer ${token}`;
     }
@@ -41,7 +59,7 @@ export const apiClient = {
 
     if (!response.ok) {
       const error = await response.json().catch(() => ({}));
-      throw new Error(error.detail || `API error: ${response.status}`);
+      throw new Error(error.message || error.detail || `API error: ${response.status}`);
     }
 
     // Handle 204 No Content
@@ -49,7 +67,8 @@ export const apiClient = {
       return undefined as T;
     }
 
-    return response.json();
+    const payload = await response.json();
+    return unwrapEnvelope<T>(payload);
   },
 
   get<T>(endpoint: string, options?: RequestInit) {

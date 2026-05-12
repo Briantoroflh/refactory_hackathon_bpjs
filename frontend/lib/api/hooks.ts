@@ -1,6 +1,26 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { getStoredAuthToken } from "@/lib/auth/storage";
+
+type ApiEnvelope<T> = {
+  status: string;
+  message: string;
+  data: T;
+};
+
+function unwrapEnvelope<T>(payload: unknown): T {
+  if (
+    typeof payload === "object" &&
+    payload !== null &&
+    "status" in payload &&
+    "data" in payload
+  ) {
+    return (payload as ApiEnvelope<T>).data;
+  }
+
+  return payload as T;
+}
 
 export interface UseAsyncState<T> {
   data: T | null;
@@ -72,10 +92,7 @@ export function useFetch<T>(
   const fetch = useCallback(async () => {
     setState({ data: null, loading: true, error: null });
     try {
-      const token =
-        typeof window !== "undefined"
-          ? localStorage.getItem("access_token")
-          : null;
+      const token = getStoredAuthToken();
       const headers: Record<string, string> = {
         "Content-Type": "application/json",
       };
@@ -107,7 +124,8 @@ export function useFetch<T>(
       });
 
       if (!response.ok) {
-        throw new Error(`API error: ${response.status}`);
+        const error = await response.json().catch(() => ({}));
+        throw new Error(error.message || error.detail || `API error: ${response.status}`);
       }
 
       if (response.status === 204) {
@@ -116,7 +134,7 @@ export function useFetch<T>(
       }
 
       const data = await response.json();
-      setState({ data, loading: false, error: null });
+      setState({ data: unwrapEnvelope<T>(data), loading: false, error: null });
     } catch (error) {
       setState({
         data: null,

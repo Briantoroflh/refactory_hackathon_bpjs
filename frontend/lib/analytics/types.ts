@@ -21,6 +21,7 @@ export interface AIInsight {
 export interface TeamAnalytics {
   sprintId: string;
   sprintNumber: number;
+  sprintLabel?: string;
   quarter: string;
   year: number;
   teamVelocity: {
@@ -35,4 +36,5 @@ export interface TeamAnalytics {
     start: string;
     end: string;
   };
+  generatedAt?: string;
 }
