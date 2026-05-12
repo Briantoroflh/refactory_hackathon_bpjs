@@ -36,6 +36,7 @@ const navigationItems: NavItem[] = [
   { label: "Analytics", href: "/analytics", icon: AnalyticsGlyph },
   { label: "AI Assistant", href: "/ai", icon: AIGlyph },
   { label: "Team", href: "/team", icon: TeamGlyph },
+  { label: "Profile", href: "/profile", icon: TeamGlyph },
   { label: "Settings", href: "/settings", icon: SettingsGlyph, active: true },
 ];
 

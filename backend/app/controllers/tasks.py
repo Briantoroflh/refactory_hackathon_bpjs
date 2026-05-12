@@ -18,6 +18,7 @@ from app.services.schemas import (
     ProjectTaskUpdateRequest,
     ProjectTaskWorkloadRequest,
 )
+from app.services.realtime import manager
 
 
 async def create_task(project_id: int, req: ProjectTaskCreateRequest, db: AsyncSession):

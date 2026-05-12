@@ -21,7 +21,7 @@ export function AnalyticsNavbar({
   onQueryChange,
 }: AnalyticsNavbarProps) {
   return (
-    <header className="flex h-[82px] items-center gap-4 border-b border-slate-200 bg-white px-4 sm:px-6 lg:px-8">
+    <header className="layout-topbar flex items-center gap-4 border-b border-slate-200 bg-white px-4 sm:px-6 lg:px-8">
       <button
         type="button"
         onClick={onOpenSidebar}

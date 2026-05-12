@@ -3,21 +3,48 @@ import type { LoginFormValues } from "./validation";
 export type LoginRequest = {
   email: string;
   password: string;
-  rememberMe: boolean;
+  rememberMe?: boolean;
 };
 
+// Backend wrapped response format (API wraps all responses)
+export type BackendWrappedResponse<T> = {
+  status: string;
+  message: string;
+  data: T;
+};
+
+// Backend login data format
+export type BackendLoginData = {
+  access_token: string;
+  refresh_token: string;
+  token_type: string;
+  expires_in: number;
+  user: {
+    user_id: number;
+    email: string;
+    full_name?: string;
+    is_active: boolean;
+    last_login?: string;
+  };
+};
+
+// Frontend response format (normalized)
 export type LoginResponse = {
-  accessToken: string;
-  refreshToken?: string;
-  user?: {
-    id: string;
-    name: string;
-    role: string;
+  access_token: string;
+  refresh_token: string;
+  user: {
+    id: number;
+    email: string;
+    name?: string;
   };
 };
 
 const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/$/, "") ?? "http://localhost:8000";
+  process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "") ??
+  "http://localhost:8000";
+
+const AUTH_STORAGE_KEY =
+  process.env.NEXT_PUBLIC_AUTH_STORAGE_KEY ?? "access_token";
 
 export async function login(values: LoginFormValues): Promise<LoginResponse> {
   const response = await fetch(`${API_BASE_URL}/auth/login`, {
@@ -25,7 +52,10 @@ export async function login(values: LoginFormValues): Promise<LoginResponse> {
     headers: {
       "Content-Type": "application/json",
     },
-    body: JSON.stringify(values as LoginRequest),
+    body: JSON.stringify({
+      email: values.email,
+      password: values.password,
+    }),
   });
 
   if (!response.ok) {
@@ -33,13 +63,75 @@ export async function login(values: LoginFormValues): Promise<LoginResponse> {
     throw new Error(message);
   }
 
-  return (await response.json()) as LoginResponse;
+  // Backend wraps response in {status, message, data}
+  const wrappedResponse =
+    (await response.json()) as BackendWrappedResponse<BackendLoginData>;
+  const backendData = wrappedResponse.data;
+
+  // Store token in localStorage
+  if (typeof window !== "undefined") {
+    localStorage.setItem(AUTH_STORAGE_KEY, backendData.access_token);
+    if (backendData.refresh_token) {
+      localStorage.setItem("refresh_token", backendData.refresh_token);
+    }
+  }
+
+  // Return normalized response
+  return {
+    access_token: backendData.access_token,
+    refresh_token: backendData.refresh_token,
+    user: {
+      id: backendData.user.user_id,
+      email: backendData.user.email,
+      name: backendData.user.full_name,
+    },
+  };
+}
+
+export function logout(): void {
+  if (typeof window !== "undefined") {
+    localStorage.removeItem(AUTH_STORAGE_KEY);
+    localStorage.removeItem("refresh_token");
+  }
+}
+
+export function getStoredToken(): string | null {
+  if (typeof window !== "undefined") {
+    return localStorage.getItem(AUTH_STORAGE_KEY);
+  }
+  return null;
+}
+
+export function isAuthenticated(): boolean {
+  return getStoredToken() !== null;
 }
 
 async function readErrorMessage(response: Response): Promise<string> {
   try {
-    const payload = (await response.json()) as { detail?: string; message?: string };
-    return payload.detail ?? payload.message ?? "Unable to sign in.";
+    const payload = (await response.json()) as {
+      status?: string;
+      message?: string;
+      detail?: string;
+      data?: Array<{ msg?: string; message?: string }> | string;
+    };
+
+    // Handle wrapped error format with validation errors
+    if (
+      payload.data &&
+      Array.isArray(payload.data) &&
+      payload.data.length > 0
+    ) {
+      const firstError = payload.data[0];
+      return (
+        firstError.msg ??
+        firstError.message ??
+        payload.message ??
+        "Unable to sign in."
+      );
+    }
+
+    // Handle direct error response
+    return payload.message ?? payload.detail ?? "Unable to sign in.";
   } catch {
     return "Unable to sign in.";
   }

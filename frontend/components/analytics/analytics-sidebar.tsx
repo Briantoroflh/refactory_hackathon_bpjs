@@ -58,7 +58,7 @@ export function AnalyticsSidebar({ open, onClose }: AnalyticsSidebarProps) {
 
       {/* Sidebar */}
       <aside
-        className={`fixed left-0 top-0 z-50 flex h-screen w-[280px] flex-col border-r border-slate-200 bg-white transition-transform duration-300 ease-in-out lg:static lg:translate-x-0 ${
+        className={`layout-sidebar fixed left-0 top-0 z-50 flex h-screen flex-col border-r border-slate-200 bg-white transition-transform duration-300 ease-in-out lg:static lg:translate-x-0 ${
           open ? "translate-x-0" : "-translate-x-full"
         }`}
       >

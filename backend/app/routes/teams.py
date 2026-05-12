@@ -24,12 +24,8 @@ from app.controllers.teams import (
 router = APIRouter(prefix="/teams", tags=["teams"])
 
 
-async def require_auth():
-    """Dependency to check authentication - TODO: Implement token validation"""
-    raise HTTPException(
-        status_code=status.HTTP_401_UNAUTHORIZED,
-        detail="Not authenticated",
-    )
+from app.routes.dependencies import require_auth
+
 
 
 @router.post("", response_model=TeamResponse)

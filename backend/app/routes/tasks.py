@@ -32,12 +32,8 @@ from app.services.schemas import (
 router = APIRouter(prefix="/projects/{project_id}/tasks", tags=["tasks"])
 
 
-async def require_auth():
-    """Dependency to check authentication - TODO: Implement token validation"""
-    raise HTTPException(
-        status_code=status.HTTP_401_UNAUTHORIZED,
-        detail="Not authenticated",
-    )
+from app.routes.dependencies import require_auth
+
 
 
 @router.post("", response_model=ProjectTaskResponse)

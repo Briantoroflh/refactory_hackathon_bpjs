@@ -12,6 +12,7 @@ from sqlalchemy.future import select
 from app.models import Project, ProjectDetail, ProjectTeam
 from app.services.audit import log_action
 from app.services.schemas import ProjectCreateRequest, ProjectStatusUpdateRequest, ProjectUpdateRequest
+from app.services.realtime import manager
 
 
 async def create_project(req: ProjectCreateRequest, db: AsyncSession):

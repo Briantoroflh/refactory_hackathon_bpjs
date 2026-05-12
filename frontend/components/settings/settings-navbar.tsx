@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import {
   BellIcon,
   HelpIcon,
@@ -61,12 +62,13 @@ export function SettingsNavbar({
         </button>
       </div>
 
-      <button
+      <Link
+        href="/profile"
         className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-slate-200 text-[12px] font-bold text-slate-600"
         aria-label="User profile"
       >
         MC
-      </button>
+      </Link>
     </header>
   );
 }

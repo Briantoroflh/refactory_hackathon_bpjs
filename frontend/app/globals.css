@@ -1,37 +1,75 @@
 @import "tailwindcss";
 
 @keyframes progress {
-  0% { transform: translateX(-100%); }
-  50% { transform: translateX(-20%); }
-  100% { transform: translateX(0); }
+  0% {
+    transform: translateX(-100%);
+  }
+  50% {
+    transform: translateX(-20%);
+  }
+  100% {
+    transform: translateX(0);
+  }
 }
 
 @keyframes fadeIn {
-  from { opacity: 0; transform: translateY(20px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 @keyframes scaleIn {
-  0% { opacity: 0; transform: scale(0.5) rotate(-10deg); }
-  100% { opacity: 1; transform: scale(1) rotate(0deg); }
+  0% {
+    opacity: 0;
+    transform: scale(0.5) rotate(-10deg);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) rotate(0deg);
+  }
 }
 
 @keyframes mesh {
-  0% { transform: translate(0,0) scale(1); }
-  33% { transform: translate(30px, -50px) scale(1.2); }
-  66% { transform: translate(-20px, 20px) scale(0.8); }
-  100% { transform: translate(0,0) scale(1); }
+  0% {
+    transform: translate(0, 0) scale(1);
+  }
+  33% {
+    transform: translate(30px, -50px) scale(1.2);
+  }
+  66% {
+    transform: translate(-20px, 20px) scale(0.8);
+  }
+  100% {
+    transform: translate(0, 0) scale(1);
+  }
 }
 
 @keyframes shimmer {
-  0% { background-position: -200% 0; }
-  100% { background-position: 200% 0; }
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
 }
 
 @keyframes drawPath {
-  0% { stroke-dashoffset: 1000; opacity: 0; }
-  50% { opacity: 1; }
-  100% { stroke-dashoffset: 0; opacity: 1; }
+  0% {
+    stroke-dashoffset: 1000;
+    opacity: 0;
+  }
+  50% {
+    opacity: 1;
+  }
+  100% {
+    stroke-dashoffset: 0;
+    opacity: 1;
+  }
 }
 
 .animate-progress {
@@ -51,7 +89,12 @@
 }
 
 .animate-shimmer {
-  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent);
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.4),
+    transparent
+  );
   background-size: 200% 100%;
   animation: shimmer 2s infinite;
 }
@@ -64,6 +107,8 @@
 :root {
   --background: #f6f7fb;
   --foreground: #0f172a;
+  --layout-sidebar-width: 248px;
+  --layout-topbar-height: 82px;
 }
 
 @theme inline {
@@ -94,4 +139,39 @@ input,
 textarea,
 select {
   font: inherit;
+}
+
+.layout-shell {
+  display: flex;
+  height: 100vh;
+  background: #f8fafc;
+}
+
+.layout-sidebar {
+  width: var(--layout-sidebar-width);
+}
+
+.layout-topbar {
+  height: var(--layout-topbar-height);
+}
+
+.layout-main {
+  flex: 1;
+  overflow-y: auto;
+}
+
+.layout-content {
+  padding: 1rem;
+}
+
+@media (min-width: 640px) {
+  .layout-content {
+    padding: 1.5rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .layout-content {
+    padding: 2rem;
+  }
 }

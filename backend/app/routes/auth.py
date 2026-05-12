@@ -1,7 +1,7 @@
 """
 Authentication routes
 """
-from fastapi import APIRouter, Depends, HTTPException, status, Request
+from fastapi import APIRouter, Depends, HTTPException, status, Request, Response
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.databases import get_db
 from app.controllers.auth import login_user, refresh_token, register_user

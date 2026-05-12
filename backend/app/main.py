@@ -194,6 +194,7 @@ def create_app() -> FastAPI:
     from app.routes.commits import router as commits_router
     from app.routes.audit import router as audit_router
     from app.routes.assistant import router as assistant_router
+    from app.routes.realtime import router as realtime_router
     
     app.include_router(auth_router)
     app.include_router(users_router)
@@ -209,6 +210,7 @@ def create_app() -> FastAPI:
     app.include_router(commits_router)
     app.include_router(audit_router)
     app.include_router(assistant_router)
+    app.include_router(realtime_router)
 
     return app
 

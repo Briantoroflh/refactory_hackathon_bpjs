@@ -155,7 +155,7 @@ export function AnalyticsPage({ analytics }: AnalyticsPageProps) {
   const sprintInfo = `Sprint ${analytics.sprintNumber} • ${analytics.quarter} ${analytics.year} Analytics`;
 
   return (
-    <div className="flex h-screen bg-slate-50">
+    <div className="layout-shell">
       <AnalyticsSidebar
         open={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
@@ -169,8 +169,8 @@ export function AnalyticsPage({ analytics }: AnalyticsPageProps) {
           onQueryChange={setQuery}
         />
 
-        <main className="flex-1 overflow-y-auto">
-          <div className="space-y-6 p-4 sm:p-6 lg:p-8">
+        <main className="layout-main">
+          <div className="layout-content space-y-6">
             {/* Header */}
             <div className="flex items-center justify-between gap-4">
               <div>

@@ -17,16 +17,8 @@ from app.services.schemas import UserResponse, RoleResponse
 router = APIRouter(prefix="/users", tags=["users"])
 
 
-async def require_auth():
-    """
-    Dependency to check authentication
-    TODO: Implement token validation
-    """
-    # Placeholder for JWT validation
-    raise HTTPException(
-        status_code=status.HTTP_401_UNAUTHORIZED,
-        detail="Not authenticated",
-    )
+from app.routes.dependencies import require_auth
+
 
 
 @router.get("/{user_id}", response_model=UserResponse)
