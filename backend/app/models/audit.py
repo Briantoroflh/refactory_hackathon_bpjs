@@ -52,6 +52,7 @@ class UserLog(Base, TimestampMixin):
     user_agent = Column(String(500), nullable=True)
     status = Column(String(50), nullable=True)  # success, failed, denied
     details = Column(JSON, nullable=True)
+    resource_type = Column(String)
     
     # Relationships
     user = relationship("User", back_populates="user_logs")

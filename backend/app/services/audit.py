@@ -12,8 +12,6 @@ async def log_action(
     db: AsyncSession,
     user_id: Optional[int],
     action: str,
-    resource_type: str,
-    resource_id: Optional[int] = None,
     ip_address: Optional[str] = None,
     user_agent: Optional[str] = None,
     details: Optional[str] = None,
@@ -32,12 +30,10 @@ async def log_action(
     log = UserLog(
         user_id=user_id,
         action=action,
-        resource_type=resource_type,
-        resource_id=resource_id,
         ip_address=ip_address,
         user_agent=user_agent,
         details=details,
-        timestamp=datetime.now(timezone.utc),
+        created_at=datetime.now(),
     )
     
     db.add(log)
@@ -109,7 +105,6 @@ async def log_auth_event(
         db,
         user_id=user_id,
         action=event_type,
-        resource_type="AUTH",
         ip_address=ip_address,
         user_agent=user_agent,
         details=reason,

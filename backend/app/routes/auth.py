@@ -99,14 +99,14 @@ async def login(req: UserLoginRequest, db: AsyncSession = Depends(get_db), reque
     
     if not user or not verify_password(req.password, user.password_hash):
         # Log failed login
-        await log_auth_event(
-            db,
-            user_id=None,
-            event_type="LOGIN_FAILED",
-            ip_address=ip_address,
-            user_agent=user_agent,
-            reason="Invalid credentials for email: " + req.email
-        )
+        # await log_auth_event(
+        #     db,
+        #     user_id=None,
+        #     event_type="LOGIN_FAILED",
+        #     ip_address=ip_address,
+        #     user_agent=user_agent,
+        #     reason="Invalid credentials for email: " + req.email
+        # )
         await db.commit()
         
         raise HTTPException(
@@ -126,13 +126,13 @@ async def login(req: UserLoginRequest, db: AsyncSession = Depends(get_db), reque
     refresh_token = create_refresh_token(data={"sub": user.user_id, "email": user.email})
     
     # Log successful login
-    await log_auth_event(
-        db,
-        user_id=user.user_id,
-        event_type="LOGIN",
-        ip_address=ip_address,
-        user_agent=user_agent,
-    )
+    # await log_auth_event(
+    #     db,
+    #     user_id=user.user_id,
+    #     event_type="LOGIN",
+    #     ip_address=ip_address,
+    #     user_agent=user_agent,
+    # )
     await db.commit()
     
     return TokenResponse(

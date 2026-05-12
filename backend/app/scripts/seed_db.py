@@ -14,7 +14,16 @@ from app.models import (
     RolePermission,
     Division,
     Category,
+    User
 )
+from app.services import (
+    hash_password,
+    verify_password,
+    create_access_token,
+    create_refresh_token,
+    verify_token,
+)
+from datetime import datetime, timezone
 
 
 async def seed_database():
@@ -33,6 +42,9 @@ async def seed_database():
     
     async with async_session() as db:
         try:
+            # Seed default users
+            await seed_users(db)
+
             # Seed default roles
             await seed_roles(db)
             
@@ -54,6 +66,40 @@ async def seed_database():
             print(f"✗ Database seeding failed: {str(e)}")
             await db.rollback()
             raise
+
+async def seed_users(db: AsyncSession):
+    """ Seed default users """
+    users_data = [
+        {
+            "email": "admin@example.com", 
+            "password": hash_password("12345"), 
+            "full_name": "Basir", 
+            "is_active": True
+        }
+    ]
+
+    for data in users_data:
+        # 1. Cek apakah user sudah ada berdasarkan email
+        stmt = select(User).where(User.email == data["email"])
+        result = await db.execute(stmt)
+        if result.scalar_one_or_none():
+            print(f"  User '{data['email']}' already exists, skipping")
+            continue
+
+        # 2. Buat instance user
+        user_obj = User(
+            email=data['email'],
+            password_hash=data['password'],
+            full_name=data["full_name"],
+            is_active=data['is_active'],
+            # Gunakan naive datetime jika database Anda TIMESTAMP WITHOUT TIME ZONE
+            last_login=datetime.now() 
+        )
+        
+        db.add(user_obj)
+        print(f"  ✓ Created user: {data['email']}")
+
+    await db.commit()
 
 
 async def seed_roles(db: AsyncSession):
