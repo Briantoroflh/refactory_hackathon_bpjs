@@ -29,6 +29,7 @@ from app.models.audit import (
     AuditSystemLog,
     GlobalJob,
 )
+from app.models.gitlab import GitLabRepository, Commit
 
 __all__ = [
     "Base",
@@ -72,4 +73,7 @@ __all__ = [
     "UserLog",
     "AuditSystemLog",
     "GlobalJob",
+    # GitLab
+    "GitLabRepository",
+    "Commit",
 ]

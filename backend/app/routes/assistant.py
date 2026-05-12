@@ -79,7 +79,7 @@ def require_ai_roles(*allowed_roles: str):
     return dependency
 
 
-@router.post("/planning", response_model=AIWorkflowResponse)
+@router.post("/planning", response_model=AIWorkflowResponse | AIJobResponse)
 async def generate_planning(
     req: AIWorkflowRequest,
     request: Request,
@@ -89,7 +89,7 @@ async def generate_planning(
     return await run_assistant_workflow("planning", req, db, current_user, request)
 
 
-@router.post("/sprint-summary", response_model=AIWorkflowResponse)
+@router.post("/sprint-summary", response_model=AIWorkflowResponse | AIJobResponse)
 async def generate_sprint_summary(
     req: AIWorkflowRequest,
     request: Request,
@@ -99,7 +99,7 @@ async def generate_sprint_summary(
     return await run_assistant_workflow("sprint_summary", req, db, current_user, request)
 
 
-@router.post("/standup-recap", response_model=AIWorkflowResponse)
+@router.post("/standup-recap", response_model=AIWorkflowResponse | AIJobResponse)
 async def generate_standup_recap(
     req: AIWorkflowRequest,
     request: Request,
@@ -109,7 +109,7 @@ async def generate_standup_recap(
     return await run_assistant_workflow("standup_recap", req, db, current_user, request)
 
 
-@router.post("/task-recommendation", response_model=AIWorkflowResponse)
+@router.post("/task-recommendation", response_model=AIWorkflowResponse | AIJobResponse)
 async def generate_task_recommendation(
     req: AIWorkflowRequest,
     request: Request,
@@ -119,7 +119,7 @@ async def generate_task_recommendation(
     return await run_assistant_workflow("task_recommendation", req, db, current_user, request)
 
 
-@router.post("/workload-suggestion", response_model=AIWorkflowResponse)
+@router.post("/workload-suggestion", response_model=AIWorkflowResponse | AIJobResponse)
 async def generate_workload_suggestion(
     req: AIWorkflowRequest,
     request: Request,
@@ -129,7 +129,7 @@ async def generate_workload_suggestion(
     return await run_assistant_workflow("workload_suggestion", req, db, current_user, request)
 
 
-@router.post("/ticket-explanation", response_model=AIWorkflowResponse)
+@router.post("/ticket-explanation", response_model=AIWorkflowResponse | AIJobResponse)
 async def generate_ticket_explanation(
     req: AIWorkflowRequest,
     request: Request,
@@ -139,7 +139,7 @@ async def generate_ticket_explanation(
     return await run_assistant_workflow("ticket_explanation", req, db, current_user, request)
 
 
-@router.post("/documentation-helper", response_model=AIWorkflowResponse)
+@router.post("/documentation-helper", response_model=AIWorkflowResponse | AIJobResponse)
 async def generate_documentation_helper(
     req: AIWorkflowRequest,
     request: Request,
@@ -149,7 +149,7 @@ async def generate_documentation_helper(
     return await run_assistant_workflow("documentation_helper", req, db, current_user, request)
 
 
-@router.post("/bug-analysis", response_model=AIWorkflowResponse)
+@router.post("/bug-analysis", response_model=AIWorkflowResponse | AIJobResponse)
 async def generate_bug_analysis(
     req: AIWorkflowRequest,
     request: Request,
@@ -159,7 +159,7 @@ async def generate_bug_analysis(
     return await run_assistant_workflow("bug_analysis", req, db, current_user, request)
 
 
-@router.post("/kanban-jobdesk", response_model=AIWorkflowResponse)
+@router.post("/kanban-jobdesk", response_model=AIWorkflowResponse | AIJobResponse)
 async def generate_kanban_jobdesk(
     req: AIWorkflowRequest,
     request: Request,

@@ -22,6 +22,7 @@
 - [x] 4.2 Add API tests for workflow endpoints, role checks, and error handling.
 - [x] 4.3 Add telemetry hooks (latency, errors) and a basic health metric for AI endpoints.
 
+
 ## 5. Rollout
 
 - [x] 5.1 Deploy to staging with `OPENROUTER_ENABLED=false`, run smoke tests.

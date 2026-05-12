@@ -181,6 +181,60 @@ async def archive_old_audit_logs():
         logger.error(f"Audit log archival job failed: {str(e)}")
 
 
+async def gitlab_sync_repositories():
+    """
+    Background job: Synchronize commits from GitLab repositories
+    
+    This job:
+    1. Gets all linked GitLab repositories
+    2. Fetches commits since last sync
+    3. Stores commits in database
+    4. Updates sync timestamps
+    5. Logs results to audit trail
+    """
+    try:
+        db = await get_async_session()
+        settings = get_settings()
+        
+        from app.services.commit_sync import CommitSyncService
+        
+        total_synced, total_errors, status_msg = await CommitSyncService.sync_all_repositories(
+            db,
+            settings.GITLAB_API_BASE_URL,
+            lookback_days=90,
+        )
+        
+        job_log = GlobalJob(
+            job_name="gitlab_sync_repositories",
+            status="completed" if total_errors == 0 else "completed_with_errors",
+            executed_at=datetime.now(timezone.utc),
+            details={
+                "total_synced": total_synced,
+                "total_errors": total_errors,
+                "status": status_msg,
+            }
+        )
+        db.add(job_log)
+        await db.commit()
+        
+        logger.info(f"GitLab commit sync job completed: {status_msg}")
+        
+    except Exception as e:
+        logger.error(f"GitLab commit sync job failed: {str(e)}")
+        try:
+            db = await get_async_session()
+            job_log = GlobalJob(
+                job_name="gitlab_sync_repositories",
+                status="failed",
+                executed_at=datetime.now(timezone.utc),
+                details={"error": str(e)}
+            )
+            db.add(job_log)
+            await db.commit()
+        except Exception as log_error:
+            logger.error(f"Failed to log GitLab sync error: {str(log_error)}")
+
+
 def init_scheduler():
     """Initialize and start the job scheduler"""
     global scheduler
@@ -189,6 +243,22 @@ def init_scheduler():
         return
 
     scheduler = AsyncIOScheduler()
+    
+    # Get settings for interval configuration
+    settings = get_settings()
+    
+    # Schedule: Sync GitLab repositories
+    gitlab_sync_interval = getattr(settings, 'GITLAB_SYNC_INTERVAL_MINUTES', 15)
+    if gitlab_sync_interval > 0:
+        scheduler.add_job(
+            gitlab_sync_repositories,
+            'interval',
+            minutes=gitlab_sync_interval,
+            id="gitlab_sync_job",
+            name="Sync GitLab repositories",
+            replace_existing=True,
+        )
+        logger.info(f"GitLab sync job scheduled every {gitlab_sync_interval} minutes")
     
     # Schedule: Fetch commits from GitHub every 6 hours
     scheduler.add_job(
@@ -227,7 +297,7 @@ def init_scheduler():
         replace_existing=True,
     )
     
-    logger.info("Background job scheduler initialized with 4 jobs")
+    logger.info("Background job scheduler initialized with 5 jobs")
 
 
 async def start_scheduler():

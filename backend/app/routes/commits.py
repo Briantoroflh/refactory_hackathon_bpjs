@@ -143,3 +143,72 @@ async def get_commit_statistics(
     - Commit frequency
     """
     return await controller_get_commit_statistics(project_id, db)
+
+
+# ============================================================================
+# GitLab Commits Routes - for GitLab integration
+# ============================================================================
+
+from app.controllers.commits import GitLabCommitsController
+from app.models import User
+from app.controllers.auth import get_current_user
+
+
+@router.get("/api/v1/commits", tags=["gitlab"])
+async def list_gitlab_commits(
+    project_id: Optional[int] = Query(None),
+    days: int = Query(30),
+    author: Optional[str] = Query(None, alias="author_email"),
+    branch: Optional[str] = Query(None),
+    skip: int = Query(0),
+    limit: int = Query(100),
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """
+    List GitLab commits with filtering.
+    
+    Query Parameters:
+    - **project_id**: Filter by project ID (optional)
+    - **days**: Include commits from last N days (default: 30)
+    - **author_email**: Filter by author email (optional)
+    - **branch**: Filter by branch name (optional)
+    - **skip**: Pagination offset (default: 0)
+    - **limit**: Pagination limit (default: 100)
+    """
+    return await GitLabCommitsController.list_gitlab_commits(
+        project_id=project_id,
+        days=days,
+        author_email=author,
+        branch=branch,
+        skip=skip,
+        limit=limit,
+        db=db,
+        current_user=current_user,
+    )
+
+
+@router.get("/api/v1/projects/{project_id}/commit-stats", tags=["gitlab"])
+async def get_gitlab_commit_stats(
+    project_id: int,
+    days: int = Query(30),
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """
+    Get aggregated commit statistics for a GitLab-linked project.
+    
+    Returns:
+    - Total commits
+    - Unique contributors
+    - Commits per day
+    - Commits by branch
+    - Top 10 contributors
+    """
+    return await GitLabCommitsController.get_gitlab_commit_stats(
+        project_id=project_id,
+        days=days,
+        db=db,
+        current_user=current_user,
+    )
+

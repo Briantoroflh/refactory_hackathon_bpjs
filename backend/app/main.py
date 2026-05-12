@@ -64,7 +64,7 @@ def create_app() -> FastAPI:
     async def wrap_api_responses(request: Request, call_next):
         response = await call_next(request)
 
-        if request.url.path.startswith(("/docs", "/redoc", "/openapi.json")):
+        if request.url.path.startswith(("/docs", "/redoc", "/openapi.json", "/ai-assistant")):
             return response
 
         if response.status_code == 204:
@@ -104,6 +104,14 @@ def create_app() -> FastAPI:
 
     @app.exception_handler(HTTPException)
     async def http_exception_handler(request: Request, exc: HTTPException):
+        # For AI assistant endpoints return the standard FastAPI HTTPException shape
+        if request.url.path.startswith("/ai-assistant"):
+            return JSONResponse(
+                status_code=exc.status_code,
+                content={"detail": extract_error_message(exc.detail)},
+                headers=exc.headers,
+            )
+
         return JSONResponse(
             status_code=exc.status_code,
             content=error_response(
@@ -169,6 +177,13 @@ def create_app() -> FastAPI:
         """Initialize on startup"""
         logger.info("SprintFlow API starting up...")
         validate_ai_settings()
+        # Reset AI telemetry on each app startup to ensure fresh metrics per test/app instance
+        try:
+            from app.services.telemetry import reset_ai_metrics
+
+            reset_ai_metrics()
+        except Exception:
+            logger.debug("Failed to reset AI telemetry on startup", exc_info=True)
         
         # Start background job scheduler
         from app.services.scheduler import start_scheduler
@@ -194,7 +209,6 @@ def create_app() -> FastAPI:
     from app.routes.commits import router as commits_router
     from app.routes.audit import router as audit_router
     from app.routes.assistant import router as assistant_router
-    from app.routes.realtime import router as realtime_router
     
     app.include_router(auth_router)
     app.include_router(users_router)
@@ -210,7 +224,6 @@ def create_app() -> FastAPI:
     app.include_router(commits_router)
     app.include_router(audit_router)
     app.include_router(assistant_router)
-    app.include_router(realtime_router)
 
     return app
 

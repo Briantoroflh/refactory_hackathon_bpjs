@@ -61,6 +61,20 @@ class Settings:
         )
         self.OPENROUTER_SITE_URL = os.getenv("OPENROUTER_SITE_URL", "")
         self.OPENROUTER_SITE_NAME = os.getenv("OPENROUTER_SITE_NAME", self.API_TITLE)
+        
+        # GitLab Integration
+        self.GITLAB_API_BASE_URL = os.getenv(
+            "GITLAB_API_BASE_URL",
+            "https://gitlab.com"
+        )
+        self.GITLAB_SYNC_INTERVAL_MINUTES = int(
+            os.getenv("GITLAB_SYNC_INTERVAL_MINUTES", "15")
+        )
+        self.GITLAB_ENABLE_AUTO_SYNC = os.getenv(
+            "GITLAB_ENABLE_AUTO_SYNC",
+            "True"
+        ).lower() == "true"
+        self.TOKEN_ENCRYPTION_KEY = os.getenv("TOKEN_ENCRYPTION_KEY", "")
 
 
 @lru_cache()

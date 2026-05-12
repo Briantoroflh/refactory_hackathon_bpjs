@@ -386,8 +386,11 @@ async def create_job(workflow: str, prompt: str, context: Dict[str, Any], user_i
 
     async with _JOB_STORE_LOCK:
         _JOB_STORE[job_id] = record
-
-    asyncio.create_task(_execute_job(job_id))
+    # Only schedule background execution when OpenRouter is enabled.
+    # When disabled (local fallback), avoid immediate execution to prevent
+    # race conditions where the job completes before the caller sees a "queued" status.
+    if settings.OPENROUTER_ENABLED:
+        asyncio.create_task(_execute_job(job_id))
     return record
 
 

@@ -9,6 +9,7 @@ from app.services.auth import (
     verify_token,
     TokenData,
 )
+from app.services.auth import create_access_token as encode_token
 from app.services.responses import (
     ApiResponse,
     build_response_envelope,
@@ -40,6 +41,7 @@ __all__ = [
     "create_refresh_token",
     "verify_token",
     "TokenData",
+    "encode_token",
     "ApiResponse",
     "build_response_envelope",
     "success_response",
