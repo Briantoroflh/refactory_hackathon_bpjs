@@ -114,11 +114,33 @@ def create_app() -> FastAPI:
 
     @app.exception_handler(RequestValidationError)
     async def validation_exception_handler(request: Request, exc: RequestValidationError):
+        # Serialize validation errors, converting non-serializable objects to strings
+        errors = []
+        for error in exc.errors():
+            serializable_error = {
+                'type': error.get('type'),
+                'loc': error.get('loc'),
+                'msg': error.get('msg'),
+                'input': error.get('input'),
+            }
+            # Only include ctx if it exists and convert non-serializable objects
+            if 'ctx' in error and error['ctx']:
+                ctx = error['ctx']
+                serializable_ctx = {}
+                for key, value in ctx.items():
+                    try:
+                        json.dumps(value)
+                        serializable_ctx[key] = value
+                    except (TypeError, ValueError):
+                        serializable_ctx[key] = str(value)
+                serializable_error['ctx'] = serializable_ctx
+            errors.append(serializable_error)
+        
         return JSONResponse(
             status_code=422,
             content=error_response(
                 message="Validation failed",
-                data=exc.errors(),
+                data=errors,
             ),
         )
 

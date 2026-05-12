@@ -1,7 +1,7 @@
 """
 Pydantic schemas for request/response validation
 """
-from pydantic import BaseModel, Field, EmailStr
+from pydantic import BaseModel, Field, EmailStr, field_validator
 from typing import Optional, List
 from datetime import datetime
 
@@ -13,11 +13,39 @@ class UserRegisterRequest(BaseModel):
     password: str = Field(..., min_length=8, max_length=100)
     full_name: Optional[str] = None
 
+    @field_validator('password')
+    @classmethod
+    def validate_password(cls, v: str) -> str:
+        """
+        Validate password requirements:
+        - Must contain at least 1 uppercase letter
+        - Must contain at least 1 number
+        """
+        if not any(c.isupper() for c in v):
+            raise ValueError('Password must contain at least 1 uppercase letter')
+        if not any(c.isdigit() for c in v):
+            raise ValueError('Password must contain at least 1 number')
+        return v
+
 
 class UserLoginRequest(BaseModel):
     """User login request"""
     email: EmailStr
     password: str
+
+    @field_validator('password')
+    @classmethod
+    def validate_password(cls, v: str) -> str:
+        """
+        Validate password requirements:
+        - Must contain at least 1 uppercase letter
+        - Must contain at least 1 number
+        """
+        if not any(c.isupper() for c in v):
+            raise ValueError('Password must contain at least 1 uppercase letter')
+        if not any(c.isdigit() for c in v):
+            raise ValueError('Password must contain at least 1 number')
+        return v
 
 
 class TokenResponse(BaseModel):
