@@ -45,6 +45,11 @@ class UserResponse(BaseModel):
         from_attributes = True
 
 
+class LoginResponse(TokenResponse):
+    """Login response including authenticated user data."""
+    user: UserResponse
+
+
 # ============= Role & Permission Schemas =============
 
 class PermissionResponse(BaseModel):

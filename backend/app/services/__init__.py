@@ -9,6 +9,14 @@ from app.services.auth import (
     verify_token,
     TokenData,
 )
+from app.services.responses import (
+    ApiResponse,
+    build_response_envelope,
+    success_response,
+    error_response,
+    is_enveloped_payload,
+    extract_error_message,
+)
 from app.services.schemas import (
     UserRegisterRequest,
     UserLoginRequest,
@@ -29,6 +37,12 @@ __all__ = [
     "create_refresh_token",
     "verify_token",
     "TokenData",
+    "ApiResponse",
+    "build_response_envelope",
+    "success_response",
+    "error_response",
+    "is_enveloped_payload",
+    "extract_error_message",
     # Request/Response schemas
     "UserRegisterRequest",
     "UserLoginRequest",

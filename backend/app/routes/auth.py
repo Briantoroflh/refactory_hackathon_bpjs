@@ -18,6 +18,7 @@ from app.services.schemas import (
     UserRegisterRequest,
     UserLoginRequest,
     TokenResponse,
+    LoginResponse,
     TokenRefreshRequest,
     UserResponse,
 )
@@ -81,7 +82,7 @@ async def register(req: UserRegisterRequest, db: AsyncSession = Depends(get_db))
     )
 
 
-@router.post("/login", response_model=TokenResponse)
+@router.post("/login", response_model=LoginResponse)
 async def login(req: UserLoginRequest, db: AsyncSession = Depends(get_db), request: Request = None):
     """
     Login with email and password
@@ -134,11 +135,14 @@ async def login(req: UserLoginRequest, db: AsyncSession = Depends(get_db), reque
     #     user_agent=user_agent,
     # )
     await db.commit()
+
+    user_data = UserResponse.model_validate(user)
     
-    return TokenResponse(
+    return LoginResponse(
         access_token=access_token,
         refresh_token=refresh_token,
         expires_in=15 * 60,  # 15 minutes
+        user=user_data,
     )
     result = await db.execute(stmt)
     user = result.scalar_one_or_none()

@@ -21,9 +21,11 @@ async def test_user_registration(client: AsyncClient):
     
     assert response.status_code == 200
     data = response.json()
-    assert "access_token" in data
-    assert "refresh_token" in data
-    assert data["expires_in"] == 900  # 15 minutes
+    assert data["status"] == "success"
+    assert data["message"] == "success"
+    assert "access_token" in data["data"]
+    assert "refresh_token" in data["data"]
+    assert data["data"]["expires_in"] == 900  # 15 minutes
 
 
 @pytest.mark.asyncio
@@ -39,7 +41,9 @@ async def test_duplicate_email_registration(client: AsyncClient, test_user):
     )
     
     assert response.status_code == 400
-    assert "already registered" in response.json()["detail"]
+    data = response.json()
+    assert data["status"] == "error"
+    assert "already registered" in data["message"]
 
 
 @pytest.mark.asyncio
@@ -55,8 +59,11 @@ async def test_user_login_success(client: AsyncClient, test_user):
     
     assert response.status_code == 200
     data = response.json()
-    assert "access_token" in data
-    assert "refresh_token" in data
+    assert data["status"] == "success"
+    assert "access_token" in data["data"]
+    assert "refresh_token" in data["data"]
+    assert "user" in data["data"]
+    assert data["data"]["user"]["email"] == test_user.email
 
 
 @pytest.mark.asyncio
@@ -71,7 +78,9 @@ async def test_user_login_invalid_password(client: AsyncClient, test_user):
     )
     
     assert response.status_code == 401
-    assert "Invalid credentials" in response.json()["detail"]
+    data = response.json()
+    assert data["status"] == "error"
+    assert "Invalid credentials" in data["message"]
 
 
 @pytest.mark.asyncio
@@ -86,7 +95,9 @@ async def test_user_login_nonexistent_email(client: AsyncClient):
     )
     
     assert response.status_code == 401
-    assert "Invalid credentials" in response.json()["detail"]
+    data = response.json()
+    assert data["status"] == "error"
+    assert "Invalid credentials" in data["message"]
 
 
 @pytest.mark.asyncio
@@ -101,7 +112,7 @@ async def test_token_refresh(client: AsyncClient, test_user):
         }
     )
     
-    refresh_token = login_response.json()["refresh_token"]
+    refresh_token = login_response.json()["data"]["refresh_token"]
     
     # Now refresh the token
     response = await client.post(
@@ -113,8 +124,9 @@ async def test_token_refresh(client: AsyncClient, test_user):
     
     assert response.status_code == 200
     data = response.json()
-    assert "access_token" in data
-    assert "refresh_token" in data
+    assert data["status"] == "success"
+    assert "access_token" in data["data"]
+    assert "refresh_token" in data["data"]
 
 
 @pytest.mark.asyncio
@@ -128,4 +140,6 @@ async def test_token_refresh_invalid(client: AsyncClient):
     )
     
     assert response.status_code == 401
-    assert "Invalid refresh token" in response.json()["detail"]
+    data = response.json()
+    assert data["status"] == "error"
+    assert "Invalid refresh token" in data["message"]
