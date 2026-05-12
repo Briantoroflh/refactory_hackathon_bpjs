@@ -1,0 +1,24 @@
+# FastAPI and supporting packages
+fastapi
+uvicorn[standard]
+python-dotenv
+pydantic
+sqlalchemy
+databases[postgresql]
+asyncpg
+alembic
+httpx
+python-multipart
+passlib[bcrypt]
+python-jose[cryptography]
+email-validator
+
+# Development and testing
+pytest
+pytest-asyncio
+pytest-cov
+black
+isort
+flake8
+mypy
+
