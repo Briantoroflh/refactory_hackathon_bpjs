@@ -1,0 +1,74 @@
+version: "3.8"
+
+services:
+  # PostgreSQL Database
+  db:
+    image: postgres:15-alpine
+    container_name: sprintflow_db
+    environment:
+      POSTGRES_DB: sprintflow_db
+      POSTGRES_USER: sprintflow
+      POSTGRES_PASSWORD: sprintflow_password
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U sprintflow"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - sprintflow
+
+  # FastAPI Application
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: sprintflow_api
+    environment:
+      DATABASE_URL: postgresql+asyncpg://sprintflow:sprintflow_password@db:5432/sprintflow_db
+      SECRET_KEY: your-secret-key-change-in-production-min-32-chars
+      DEBUG: "False"
+      API_TITLE: SprintFlow API
+      API_VERSION: 1.0.0
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - ./logs:/app/logs
+      - ./app:/app/app
+    networks:
+      - sprintflow
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Nginx Reverse Proxy (Optional)
+  nginx:
+    image: nginx:alpine
+    container_name: sprintflow_nginx
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - api
+    networks:
+      - sprintflow
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+    driver: local
+
+networks:
+  sprintflow:
+    driver: bridge
