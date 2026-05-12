@@ -53,7 +53,7 @@ export function ProjectsSidebar({ open, onClose }: ProjectsSidebarProps) {
               <AIIcon className="h-5 w-5" />
             </div>
             <div>
-              <p className="text-[34px] font-bold tracking-[-0.02em] text-[#4338ca] lg:text-[34px]">Bloom</p>
+              <p className="text-[26px] font-bold tracking-[-0.02em] text-[#4338ca] lg:text-[22px]">Bloom</p>
               <p className="text-[14px] font-medium text-slate-500">AI Productivity</p>
             </div>
           </div>

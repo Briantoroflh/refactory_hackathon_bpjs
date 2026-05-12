@@ -23,7 +23,7 @@ export function ProjectCard({ project, onOpenDetail }: ProjectCardProps) {
             <button
               type="button"
               onClick={() => onOpenDetail(project.id)}
-              className="text-left text-[24px] font-semibold leading-[1.15] tracking-[-0.03em] text-slate-800 transition hover:text-[#4338ca]"
+              className="text-left text-[20px] font-semibold leading-[1.2] tracking-[-0.03em] text-slate-800 transition hover:text-[#4338ca]"
             >
               {project.name}
             </button>
@@ -39,7 +39,7 @@ export function ProjectCard({ project, onOpenDetail }: ProjectCardProps) {
         <div>
           <p className="text-[13px] uppercase tracking-[0.12em] text-slate-500">AI Health Score</p>
           <div className="mt-1 flex items-center gap-2">
-            <span className={`text-[36px] font-semibold tracking-[-0.03em] ${healthColor}`}>
+            <span className={`text-[32px] font-semibold tracking-[-0.03em] ${healthColor}`}>
               {project.aiHealthScore}
             </span>
             <ProjectStatusBadge status={project.status} />

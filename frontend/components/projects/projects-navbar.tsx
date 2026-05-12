@@ -35,7 +35,7 @@ export function ProjectsNavbar({
         />
       </div>
 
-      <button className="inline-flex h-11 items-center gap-2 rounded-xl bg-[#3f2fd6] px-4 text-[18px] font-semibold text-white shadow-[0_10px_24px_rgba(63,47,214,0.24)] lg:text-[16px]">
+      <button className="inline-flex h-11 items-center gap-2 rounded-xl bg-[#3f2fd6] px-4 text-[15px] font-semibold text-white shadow-[0_10px_24px_rgba(63,47,214,0.24)]">
         <PlusIcon className="h-5 w-5" />
         <span>New Project</span>
       </button>
@@ -52,4 +52,3 @@ export function ProjectsNavbar({
     </header>
   );
 }
-
