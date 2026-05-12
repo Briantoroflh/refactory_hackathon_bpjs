@@ -24,7 +24,7 @@ export function ProjectsNavbar({
         <MenuIcon className="h-5 w-5" />
       </button>
 
-      <div className="hidden min-w-0 flex-1 items-center rounded-2xl border border-[#e5def7] bg-[#f4eefc] px-4 py-3 text-slate-400 shadow-[0_1px_0_rgba(15,23,42,0.02)] md:flex md:max-w-[420px]">
+      <div className="hidden w-full max-w-[clamp(220px,24vw,360px)] flex-1 items-center rounded-2xl border border-[#e5def7] bg-[#f4eefc] px-4 py-3 text-slate-400 shadow-[0_1px_0_rgba(15,23,42,0.02)] lg:flex">
         <SearchIcon className="h-5 w-5 shrink-0" />
         <input
           aria-label="Search projects"

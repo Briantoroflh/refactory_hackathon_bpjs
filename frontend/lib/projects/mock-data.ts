@@ -76,7 +76,7 @@ export const emptyProjectsMockData: ProjectsPageData = {
 export const projectSidebarItems = [
   { label: "Dashboard", href: "/dashboard", icon: "dashboard" },
   { label: "Project", href: "/projects", icon: "project", active: true },
-  { label: "Sprint", href: "/sprint", icon: "sprint" },
+  { label: "Sprint", href: "/sprints", icon: "sprint" },
   { label: "Tasks", href: "/tasks", icon: "tasks" },
   { label: "Analytics", href: "/analytics", icon: "analytics" },
   { label: "AI Assistant", href: "/ai", icon: "ai" },
@@ -87,4 +87,3 @@ export const projectSidebarItems = [
 export function findProjectById(projects: ProjectItem[], id: string): ProjectItem | undefined {
   return projects.find((project) => project.id === id);
 }
-

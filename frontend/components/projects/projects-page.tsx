@@ -58,10 +58,10 @@ export function ProjectsPage() {
 
           <main className="flex-1 overflow-y-auto bg-[#f8f9fd] px-4 py-5 sm:px-6 lg:px-8">
             <section>
-              <h1 className="text-[36px] font-semibold tracking-[-0.04em] text-slate-800 sm:text-[40px] lg:text-[52px]">
+              <h1 className="text-[30px] font-semibold tracking-[-0.04em] text-slate-800 sm:text-[34px] lg:text-[40px]">
                 Active Projects
               </h1>
-              <p className="mt-2 text-[17px] text-slate-600 sm:text-[18px] lg:text-[30px]">
+              <p className="mt-2 text-[16px] text-slate-600 sm:text-[17px] lg:text-[20px]">
                 Manage and monitor repository health and engineering velocity.
               </p>
             </section>

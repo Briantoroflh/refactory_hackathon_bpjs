@@ -3,7 +3,7 @@ import type { DashboardNavItem, DashboardOverview } from "./types";
 export const dashboardNavItems: DashboardNavItem[] = [
   { label: "Dashboard", href: "/dashboard", icon: "dashboard", active: true },
   { label: "Project", href: "/projects", icon: "project" },
-  { label: "Sprint", href: "/sprint", icon: "sprint" },
+  { label: "Sprint", href: "/sprints", icon: "sprint" },
   { label: "Tasks", href: "/tasks", icon: "tasks" },
   { label: "Analytics", href: "/analytics", icon: "analytics" },
   { label: "AI Assistant", href: "/ai", icon: "ai" },
