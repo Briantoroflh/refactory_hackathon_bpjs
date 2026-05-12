@@ -29,7 +29,7 @@ class GitLabRepository(Base):
     __tablename__ = "gitlab_repositories"
 
     id = Column(Integer, primary_key=True, index=True)
-    project_id = Column(Integer, ForeignKey("projects.id"), nullable=False, unique=True)
+    project_id = Column(Integer, ForeignKey("projects.project_id"), nullable=False, unique=True)
     gitlab_project_id = Column(Integer, nullable=False, index=True)
     gitlab_url = Column(String(500), nullable=False)
     gitlab_access_token = Column(String(500), nullable=False)  # Encrypted in practice

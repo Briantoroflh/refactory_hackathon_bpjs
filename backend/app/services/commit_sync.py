@@ -14,7 +14,12 @@ from app.models.gitlab import GitLabRepository, Commit
 from app.models.audit import AuditSystemLog
 from app.services.gitlab_client import GitLabClientFactory
 from app.services.token_encryption import get_encryption_helper
-from gitlab.exceptions import GitlabError
+from app.services.cache import get_metrics_cache
+try:
+    from gitlab.exceptions import GitlabError  # type: ignore
+except Exception:  # pragma: no cover - optional dependency
+    class GitlabError(Exception):
+        pass
 
 logger = logging.getLogger(__name__)
 
@@ -68,6 +73,12 @@ class CommitSyncService:
                     )
                     total_synced += synced
                     total_errors += errors
+                    
+                    # Invalidate metrics cache for this repository
+                    if synced > 0:
+                        cache = get_metrics_cache()
+                        cache.invalidate_repository(repo.id)
+                        logger.info(f"Invalidated metrics cache for repository {repo.id}")
 
                 except Exception as e:
                     logger.error(f"Error syncing repository {repo.id}: {str(e)}")

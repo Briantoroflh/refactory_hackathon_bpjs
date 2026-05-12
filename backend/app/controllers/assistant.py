@@ -7,7 +7,8 @@ from fastapi import HTTPException, Request, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.services.audit import log_action
-from app.services.assistant import AIServiceError, create_job, get_job, run_workflow
+import app.services.assistant as assistant_service
+from app.services.assistant import AIServiceError, create_job, get_job
 from app.services.schemas import AIJobResponse, AIWorkflowRequest, AIWorkflowResponse
 
 
@@ -40,7 +41,7 @@ async def run_assistant_workflow(
         )
 
     try:
-        result = await run_workflow(workflow, req.prompt, req.context)
+        result = await assistant_service.run_workflow(workflow, req.prompt, req.context)
         await _log_ai_action(
             db=db,
             user_id=user_id,

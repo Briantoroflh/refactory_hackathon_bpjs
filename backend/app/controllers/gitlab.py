@@ -8,14 +8,18 @@ from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.controllers.common import get_db
+from app.databases import get_db
 from app.models import Project, User
 from app.models.gitlab import GitLabRepository, Commit
 from app.services.gitlab_client import GitLabClientFactory
 from app.services.commit_sync import CommitSyncService
 from app.services.token_encryption import get_encryption_helper
 from app.controllers.auth import get_current_user
-from gitlab.exceptions import GitlabError
+try:
+    from gitlab.exceptions import GitlabError  # type: ignore
+except Exception:  # pragma: no cover - optional dependency
+    class GitlabError(Exception):
+        pass
 
 logger = logging.getLogger(__name__)
 

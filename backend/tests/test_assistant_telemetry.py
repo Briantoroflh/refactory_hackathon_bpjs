@@ -92,6 +92,8 @@ def test_telemetry_latency_bounds():
 @pytest.mark.asyncio
 async def test_health_endpoint_no_requests(client):
     """Test health endpoint when no requests have been made."""
+    reset_ai_metrics()  # Clear any previous test metrics
+    
     response = await client.get("/ai-assistant/health")
     
     assert response.status_code == status.HTTP_200_OK

@@ -5,7 +5,7 @@ FastAPI routes for dashboard metrics endpoints.
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.controllers.common import get_db
+from app.databases import get_db
 from app.models import User, Project
 from app.controllers.auth import get_current_user
 from app.services.commit_analytics import CommitAnalyticsService

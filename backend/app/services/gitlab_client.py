@@ -6,8 +6,18 @@ import logging
 from datetime import datetime, timedelta
 from typing import Optional, List, Dict, Any
 
-import gitlab
-from gitlab.exceptions import GitlabError, GitlabGetError
+try:
+    import gitlab  # type: ignore
+    from gitlab.exceptions import GitlabError, GitlabGetError  # type: ignore
+except Exception:  # pragma: no cover - optional dependency
+    gitlab = None
+
+    class GitlabError(Exception):
+        pass
+
+    class GitlabGetError(GitlabError):
+        pass
+
 import httpx
 
 logger = logging.getLogger(__name__)

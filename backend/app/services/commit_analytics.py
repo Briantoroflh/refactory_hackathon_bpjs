@@ -10,6 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func, and_
 
 from app.models.gitlab import GitLabRepository, Commit
+from app.services.cache import cache_metric, get_metrics_cache
 
 logger = logging.getLogger(__name__)
 
@@ -20,6 +21,7 @@ class CommitAnalyticsService:
     """
 
     @staticmethod
+    @cache_metric(ttl_seconds=300)
     async def get_commit_frequency(
         session: AsyncSession,
         repository_id: int,
@@ -56,6 +58,7 @@ class CommitAnalyticsService:
         }
 
     @staticmethod
+    @cache_metric(ttl_seconds=300)
     async def get_top_contributors(
         session: AsyncSession,
         repository_id: int,
@@ -106,6 +109,7 @@ class CommitAnalyticsService:
         ]
 
     @staticmethod
+    @cache_metric(ttl_seconds=300)
     async def get_branch_activity(
         session: AsyncSession,
         repository_id: int,
@@ -151,6 +155,7 @@ class CommitAnalyticsService:
         ]
 
     @staticmethod
+    @cache_metric(ttl_seconds=300)
     async def get_commit_velocity(
         session: AsyncSession,
         repository_id: int,
@@ -220,6 +225,7 @@ class CommitAnalyticsService:
         }
 
     @staticmethod
+    @cache_metric(ttl_seconds=300)
     async def get_repository_health_status(
         session: AsyncSession,
         repository_id: int,
@@ -279,6 +285,7 @@ class CommitAnalyticsService:
             return "red"
 
     @staticmethod
+    @cache_metric(ttl_seconds=300)
     async def get_dashboard_metrics(
         session: AsyncSession,
         repository_id: int,

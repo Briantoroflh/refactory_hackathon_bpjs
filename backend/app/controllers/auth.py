@@ -1,10 +1,11 @@
 """
 Authentication controller logic.
 """
-from fastapi import HTTPException, Request, status
+from fastapi import HTTPException, Request, status, Header, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 
+from app.databases import get_db
 from app.models import User
 from app.services import (
     hash_password,
@@ -118,3 +119,32 @@ async def refresh_token(req: TokenRefreshRequest) -> TokenResponse:
         refresh_token=req.refresh_token,
         expires_in=15 * 60,
     )
+
+
+async def get_current_user(
+    authorization: str | None = Header(default=None),
+    db: AsyncSession = Depends(get_db),
+) -> User:
+    """Dependency to return currently authenticated `User` from Authorization header.
+
+    Raises HTTP 401 when token missing/invalid or user not found/inactive.
+    """
+    if not authorization or not authorization.lower().startswith("bearer "):
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Not authenticated")
+
+    token = authorization.split(" ", 1)[1].strip()
+    payload = verify_token(token)
+    if not payload or payload.get("type") == "refresh":
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid access token")
+
+    user_id = payload.get("sub")
+    if user_id is None:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token payload")
+
+    stmt = select(User).where(User.user_id == int(user_id))
+    result = await db.execute(stmt)
+    user = result.scalar_one_or_none()
+    if not user or not user.is_active:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Not authenticated")
+
+    return user

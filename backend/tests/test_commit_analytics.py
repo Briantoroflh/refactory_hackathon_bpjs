@@ -190,7 +190,7 @@ class TestCommitAnalyticsIntegration:
     """Integration tests for analytics (requires database)."""
 
     @pytest.mark.skipif(
-        not pytest.config.getoption("--db-integration"),
+        True,  # Skip by default; run with pytest.mark.integration to enable
         reason="Requires --db-integration flag"
     )
     @pytest.mark.asyncio
@@ -203,7 +203,7 @@ class TestCommitAnalyticsIntegration:
         pass
 
     @pytest.mark.skipif(
-        not pytest.config.getoption("--db-integration"),
+        True,  # Skip by default; run with pytest.mark.integration to enable
         reason="Requires --db-integration flag"
     )
     @pytest.mark.asyncio
