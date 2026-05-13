@@ -1,7 +1,6 @@
 """
 Project controller logic.
 """
-from datetime import datetime, timezone
 from typing import Optional
 
 from fastapi import HTTPException, status
@@ -11,6 +10,7 @@ from sqlalchemy.future import select
 
 from app.models import Project, ProjectDetail, ProjectTeam
 from app.services.audit import log_action
+from app.services.time_utils import utcnow_naive
 from app.services.schemas import ProjectCreateRequest, ProjectStatusUpdateRequest, ProjectUpdateRequest
 from app.services.realtime import manager
 
@@ -80,7 +80,7 @@ async def update_project(project_id: int, req: ProjectUpdateRequest, db: AsyncSe
         project.description = req.description
 
     project.version += 1
-    project.updated_at = datetime.now(timezone.utc)
+    project.updated_at = utcnow_naive()
     await db.commit()
     await db.refresh(project)
     return project
@@ -99,7 +99,7 @@ async def update_project_status(project_id: int, req: ProjectStatusUpdateRequest
 
     project.status = req.status
     project.version += 1
-    project.updated_at = datetime.now(timezone.utc)
+    project.updated_at = utcnow_naive()
     await db.commit()
     await db.refresh(project)
     return project
@@ -115,7 +115,7 @@ async def link_repository(project_id: int, repository_url: str, repository_type:
     project.repository_url = repository_url
     project.repository_type = repository_type
     project.repository_token = token
-    project.updated_at = datetime.now(timezone.utc)
+    project.updated_at = utcnow_naive()
     await db.commit()
     return {"message": "Repository linked successfully"}
 

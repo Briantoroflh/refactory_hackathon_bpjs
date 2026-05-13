@@ -1,11 +1,13 @@
 """
 Audit logging utilities for automatic logging of system actions
 """
-from datetime import datetime, timezone
+from datetime import datetime
 from typing import Optional, Any, Dict, List
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.models import UserLog, AuditSystemLog, CommitChangeLogs
 import json
+
+from app.services.time_utils import utcnow_naive
 
 
 async def log_action(
@@ -75,7 +77,7 @@ async def log_field_change(
         old_value=old_str,
         new_value=new_str,
         changed_by_user_id=changed_by_user_id,
-        timestamp=datetime.now(timezone.utc),
+        timestamp=utcnow_naive(),
     )
     
     db.add(log)
@@ -168,7 +170,7 @@ async def log_commit_change(
         new_value=new_value,
         changed_by_user_id=changed_by_user_id,
         change_reason=change_reason,
-        timestamp=datetime.now(timezone.utc),
+        timestamp=utcnow_naive(),
     )
     
     db.add(log)

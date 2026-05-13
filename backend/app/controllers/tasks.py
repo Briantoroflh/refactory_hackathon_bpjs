@@ -1,7 +1,6 @@
 """
 Task controller logic.
 """
-from datetime import datetime, timezone
 from typing import Optional
 
 from fastapi import HTTPException, Query, status
@@ -11,6 +10,7 @@ from sqlalchemy.future import select
 
 from app.models import Project, ProjectTask, ProjectTaskComment, ProjectTaskHistory, ProjectTaskWorkload
 from app.services.audit import log_action
+from app.services.time_utils import utcnow_naive
 from app.services.schemas import (
     ProjectTaskCommentRequest,
     ProjectTaskCreateRequest,
@@ -98,7 +98,7 @@ async def update_task(project_id: int, task_id: int, req: ProjectTaskUpdateReque
         task.deadline = req.deadline
 
     task.version += 1
-    task.updated_at = datetime.now(timezone.utc)
+    task.updated_at = utcnow_naive()
     await db.commit()
     await db.refresh(task)
     return task
@@ -117,7 +117,7 @@ async def update_task_status(project_id: int, task_id: int, req: ProjectTaskStat
 
     task.status = req.status
     task.version += 1
-    task.updated_at = datetime.now(timezone.utc)
+    task.updated_at = utcnow_naive()
     await db.commit()
     await db.refresh(task)
     return task
@@ -131,7 +131,7 @@ async def update_task_assignee(project_id: int, task_id: int, assigned_to: int, 
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Task not found")
 
     task.assigned_to = assigned_to
-    task.updated_at = datetime.now(timezone.utc)
+    task.updated_at = utcnow_naive()
     await db.commit()
     return {"message": "Assignee updated"}
 

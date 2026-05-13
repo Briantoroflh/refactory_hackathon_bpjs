@@ -1,7 +1,7 @@
 """
 Team and organization controller logic.
 """
-from datetime import datetime, timezone
+from datetime import datetime
 from typing import Optional
 
 from fastapi import HTTPException, status
@@ -11,6 +11,7 @@ from sqlalchemy.future import select
 
 from app.controllers.common import commit_and_refresh, fetch_one_or_404
 from app.models import Category, Division, Permission, Team, TeamMember, Worker
+from app.services.time_utils import utcnow_naive, utcnow_iso
 
 
 async def create_team(name: str, category_id: int, description: Optional[str], capacity_hours: float, db: AsyncSession):
@@ -56,7 +57,7 @@ async def update_team(team_id: int, name: Optional[str], description: Optional[s
     if status_value:
         team.status = status_value
 
-    team.updated_at = datetime.now(timezone.utc)
+    team.updated_at = utcnow_naive()
     await db.commit()
     await db.refresh(team)
     return team
@@ -78,7 +79,7 @@ async def add_team_member(team_id: int, worker_id: int, role: str, db: AsyncSess
     if result.scalar_one_or_none():
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Worker is already a member of this team")
 
-    member = TeamMember(team_id=team_id, worker_id=worker_id, role=role, join_date=datetime.now(timezone.utc))
+    member = TeamMember(team_id=team_id, worker_id=worker_id, role=role, join_date=utcnow_iso())
     db.add(member)
     await db.commit()
     return {"message": "Member added to team successfully"}

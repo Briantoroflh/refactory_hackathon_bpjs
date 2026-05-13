@@ -1,7 +1,6 @@
 """
 Worker and KPI controller logic.
 """
-from datetime import datetime, timezone
 from typing import List, Optional
 
 from fastapi import HTTPException, status
@@ -11,6 +10,7 @@ from sqlalchemy.future import select
 
 from app.controllers.common import commit_and_refresh, fetch_one_or_404
 from app.models import Worker, WorkerKPI, WorkerKPISummary
+from app.services.time_utils import utcnow_naive
 
 
 async def create_worker(full_name: str, email: str, division_id: int, phone: Optional[str], skills: Optional[List[str]], db: AsyncSession):
@@ -45,7 +45,7 @@ async def update_worker(worker_id: int, full_name: Optional[str], phone: Optiona
     if employment_status:
         worker.employment_status = employment_status
 
-    worker.updated_at = datetime.now(timezone.utc)
+    worker.updated_at = utcnow_naive()
     return await commit_and_refresh(db, worker)
 
 
@@ -87,7 +87,7 @@ async def record_worker_kpi(worker_id: int, project_id: int, score: float, db: A
 
     if existing:
         existing.score = score
-        existing.updated_at = datetime.now(timezone.utc)
+        existing.updated_at = utcnow_naive()
     else:
         db.add(WorkerKPI(worker_id=worker_id, project_id=project_id, score=score, metrics={}, is_manual_override=False))
 
@@ -113,6 +113,6 @@ async def update_worker_kpi(worker_id: int, project_id: int, score: float, overr
     kpi.score = score
     kpi.is_manual_override = True
     kpi.override_reason = override_reason
-    kpi.updated_at = datetime.now(timezone.utc)
+    kpi.updated_at = utcnow_naive()
     await db.commit()
     return {"message": "KPI updated successfully"}
