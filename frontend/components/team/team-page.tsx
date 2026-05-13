@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React from "react";
 import { AppLayout } from "@/components/layout/app-layout";
 import type {
   TeamAccessControl,
@@ -10,6 +10,7 @@ import type {
 
 type TeamPageProps = {
   accessControl: TeamAccessControl;
+  notice?: string | null;
 };
 
 function StatusBadge({ status }: { status: string }) {
@@ -20,9 +21,8 @@ function StatusBadge({ status }: { status: string }) {
   };
   return (
     <span
-      className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-[12px] font-semibold ${
-        variants[status as keyof typeof variants] || ""
-      }`}
+      className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-[12px] font-semibold ${variants[status as keyof typeof variants] || ""
+        }`}
     >
       <span className="h-1.5 w-1.5 rounded-full bg-current" />
       {status}
@@ -38,9 +38,8 @@ function RoleBadge({ role }: { role: string }) {
   };
   return (
     <span
-      className={`inline-flex rounded-lg border px-2.5 py-1 text-[12px] font-semibold ${
-        variants[role as keyof typeof variants] || ""
-      }`}
+      className={`inline-flex rounded-lg border px-2.5 py-1 text-[12px] font-semibold ${variants[role as keyof typeof variants] || ""
+        }`}
     >
       {role}
     </span>
@@ -50,15 +49,13 @@ function RoleBadge({ role }: { role: string }) {
 function PermissionToggle({ enabled }: { enabled: boolean }) {
   return (
     <button
-      className={`relative inline-flex h-6 w-11 items-center rounded-full transition ${
-        enabled ? "bg-emerald-500" : "bg-slate-300"
-      }`}
+      className={`relative inline-flex h-6 w-11 items-center rounded-full transition ${enabled ? "bg-emerald-500" : "bg-slate-300"
+        }`}
       aria-pressed={enabled}
     >
       <span
-        className={`inline-block h-4 w-4 transform rounded-full bg-white transition ${
-          enabled ? "translate-x-6" : "translate-x-1"
-        }`}
+        className={`inline-block h-4 w-4 transform rounded-full bg-white transition ${enabled ? "translate-x-6" : "translate-x-1"
+          }`}
       />
     </button>
   );
@@ -170,10 +167,16 @@ function ModulePermissionsCard({
   );
 }
 
-export function TeamPage({ accessControl }: TeamPageProps) {
+export function TeamPage({ accessControl, notice }: TeamPageProps) {
   return (
     <AppLayout title="Team Access Control">
       <div className="space-y-6">
+        {notice ? (
+          <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-[14px] font-medium text-amber-800 shadow-sm">
+            {notice}
+          </div>
+        ) : null}
+
         {/* Header Extra */}
         <div className="flex items-start justify-between gap-4">
           <p className="text-[16px] font-medium text-slate-500 max-w-md">

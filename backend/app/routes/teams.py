@@ -69,6 +69,16 @@ async def list_teams(
     return await controller_list_teams(db, skip, limit, category_id, status)
 
 
+@router.get("/access-control", response_model=TeamAccessControlResponse)
+async def get_team_access_control(
+    team_id: Optional[int] = Query(None),
+    db: AsyncSession = Depends(get_db),
+    _: None = Depends(require_auth),
+):
+    """Get live team access control dashboard data."""
+    return await controller_get_team_access_control(team_id, db)
+
+
 @router.get("/{team_id}", response_model=TeamResponse)
 async def get_team(
     team_id: int,
@@ -160,16 +170,6 @@ async def get_my_teams(
     TODO: Filter by current user from JWT token
     """
     return await controller_get_my_teams()
-
-
-@router.get("/access-control", response_model=TeamAccessControlResponse)
-async def get_team_access_control(
-    team_id: Optional[int] = None,
-    db: AsyncSession = Depends(get_db),
-    _: None = Depends(require_auth),
-):
-    """Get live team access control dashboard data."""
-    return await controller_get_team_access_control(team_id, db)
 
 
 # Division endpoints
