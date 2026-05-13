@@ -315,6 +315,8 @@ async def run_workflow(workflow: str, prompt: str, context: Dict[str, Any]) -> D
                     raise AIServiceError(message=message, status_code=response.status_code, retryable=retryable)
 
                 data = response.json()
+
+                print(data)
                 content = ""
                 if data.get("choices"):
                     message = data["choices"][0].get("message", {})
@@ -373,7 +375,7 @@ async def run_workflow(workflow: str, prompt: str, context: Dict[str, Any]) -> D
 async def create_job(workflow: str, prompt: str, context: Dict[str, Any], user_id: int, user_role: str) -> AIJobRecord:
     settings = get_settings()
     job_id = uuid.uuid4().hex
-    record = AIJobRecord(
+    record = AIJobRecord(   
         job_id=job_id,
         workflow=workflow,
         status="queued",
