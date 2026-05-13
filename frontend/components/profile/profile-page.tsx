@@ -261,7 +261,7 @@ export function ProfilePage() {
                     <span className="opacity-0 group-hover:opacity-100 transition-opacity">→</span>
                   </Link>
                   <Link
-                    href="/dashboard"
+                    href="/home"
                     className="flex items-center justify-between rounded-2xl border border-slate-200 bg-white px-5 py-4 text-[14px] font-bold text-slate-700 hover:border-[#4338ca] hover:text-[#4338ca] transition-all shadow-sm group"
                   >
                     Back to Dashboard

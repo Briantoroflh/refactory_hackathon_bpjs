@@ -2,7 +2,7 @@
 
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { AppLayout } from "@/components/layout/app-layout";
-import { updateTaskStatus } from "@/lib/tasks/api";
+import { updateTaskStatus, generateKanbanWithAI, pollAIJobStatus, type AIJobResponse } from "@/lib/tasks/api";
 import type { SprintTasks, TaskCard } from "@/lib/tasks/types";
 
 type TasksPageProps = {
@@ -203,6 +203,8 @@ export function TasksPage({ tasks, projectId, notice }: TasksPageProps) {
   const [draggingTaskId, setDraggingTaskId] = useState<string | null>(null);
   const [statusNotice, setStatusNotice] = useState<string | null>(notice ?? null);
   const [savingTaskId, setSavingTaskId] = useState<string | null>(null);
+  const [aiGenerating, setAiGenerating] = useState(false);
+  const [aiJobId, setAiJobId] = useState<string | null>(null);
 
   useEffect(() => {
     setBoard(tasks);
@@ -259,6 +261,81 @@ export function TasksPage({ tasks, projectId, notice }: TasksPageProps) {
     [board, draggingTaskId, projectId, updateLocalBoard],
   );
 
+  const pollJobCompletion = useCallback(
+    async (jobId: string) => {
+      let attempts = 0;
+      const maxAttempts = 60;
+
+      while (attempts < maxAttempts) {
+        try {
+          const result = await pollAIJobStatus(jobId);
+
+          if (result.status === "completed" || result.status === "success") {
+            if (result.result?.structured_output) {
+              const generatedTasks = result.result.structured_output.tasks as unknown[];
+              if (Array.isArray(generatedTasks) && generatedTasks.length > 0) {
+                setStatusNotice(`✅ Generated ${generatedTasks.length} new tasks`);
+              }
+            }
+            setAiJobId(null);
+            setAiGenerating(false);
+            return;
+          }
+
+          if (result.status === "failed" || result.status === "error") {
+            setStatusNotice(result.error || "AI generation failed");
+            setAiJobId(null);
+            setAiGenerating(false);
+            return;
+          }
+
+          attempts += 1;
+          await new Promise((resolve) => setTimeout(resolve, 1000));
+        } catch (error) {
+          setStatusNotice(error instanceof Error ? error.message : "Polling failed");
+          setAiJobId(null);
+          setAiGenerating(false);
+          return;
+        }
+      }
+
+      setStatusNotice("AI generation timed out after 60s");
+      setAiJobId(null);
+      setAiGenerating(false);
+    },
+    [],
+  );
+
+  useEffect(() => {
+    if (aiJobId) {
+      void pollJobCompletion(aiJobId);
+    }
+  }, [aiJobId, pollJobCompletion]);
+
+  const handleAIGenerate = useCallback(async () => {
+    setAiGenerating(true);
+    setStatusNotice(null);
+
+    try {
+      const response = await generateKanbanWithAI(
+        projectId,
+        "Generate optimized kanban tasks for this project based on best practices and industry standards.",
+      );
+
+      const jobId = (response as Record<string, unknown>)?.job_id;
+      if (jobId) {
+        setAiJobId(String(jobId));
+        setStatusNotice("🔄 AI is generating kanban tasks...");
+      } else {
+        setStatusNotice("Failed to start AI generation");
+        setAiGenerating(false);
+      }
+    } catch (error) {
+      setStatusNotice(error instanceof Error ? error.message : "Failed to start AI generation");
+      setAiGenerating(false);
+    }
+  }, [projectId]);
+
   const columns = useMemo(
     () =>
       columnOrder
@@ -297,8 +374,12 @@ export function TasksPage({ tasks, projectId, notice }: TasksPageProps) {
               🔗 {board.repositoryLink}
             </a>
           </div>
-          <button className="inline-flex items-center gap-2 rounded-xl bg-[#4338ca] px-5 py-2.5 text-[14px] font-bold text-white shadow-[0_10px_24px_rgba(67,56,202,0.25)] transition hover:bg-[#3f2fd6]">
-            ✨ AI Generate Kanban
+          <button 
+            onClick={() => void handleAIGenerate()}
+            disabled={aiGenerating}
+            className="inline-flex items-center gap-2 rounded-xl bg-[#4338ca] px-5 py-2.5 text-[14px] font-bold text-white shadow-[0_10px_24px_rgba(67,56,202,0.25)] transition hover:bg-[#3f2fd6] disabled:opacity-60 disabled:cursor-not-allowed"
+          >
+            {aiGenerating ? "⏳ Generating..." : "✨ AI Generate Kanban"}
           </button>
         </div>
 

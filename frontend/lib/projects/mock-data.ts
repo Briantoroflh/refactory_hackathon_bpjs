@@ -74,7 +74,7 @@ export const emptyProjectsMockData: ProjectsPageData = {
 };
 
 export const projectSidebarItems = [
-  { label: "Dashboard", href: "/dashboard", icon: "dashboard" },
+  { label: "Dashboard", href: "/home", icon: "dashboard" },
   { label: "Project", href: "/projects", icon: "project", active: true },
   { label: "Sprint", href: "/sprints", icon: "sprint" },
   { label: "Tasks", href: "/tasks", icon: "tasks" },

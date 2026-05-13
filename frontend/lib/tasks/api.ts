@@ -227,3 +227,38 @@ export async function updateTaskStatus(
     version,
   });
 }
+
+export interface AIJobResponse {
+  job_id: string;
+  workflow: string;
+  status: string;
+  model: string;
+  result?: {
+    workflow: string;
+    status: string;
+    content: string;
+    structured_output?: Record<string, unknown>;
+    job_id?: string;
+  };
+  error?: string;
+}
+
+export async function generateKanbanWithAI(
+  projectId: number,
+  prompt: string,
+) {
+  const response = await apiClient.post<AIJobResponse | { job_id: string; workflow: string; status: string }>(
+    "/ai-assistant/kanban-jobdesk",
+    {
+      prompt,
+      context: { project_id: projectId },
+      async_mode: true,
+    },
+  );
+
+  return response;
+}
+
+export async function pollAIJobStatus(jobId: string): Promise<AIJobResponse> {
+  return apiClient.get(`/ai-assistant/jobs/${jobId}`);
+}

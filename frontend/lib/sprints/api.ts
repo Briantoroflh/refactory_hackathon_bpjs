@@ -10,7 +10,7 @@ import type {
 const DEFAULT_PROJECT_ID = 3;
 
 export const sprintSidebarItems: SprintSidebarItem[] = [
-  { label: "Dashboard", href: "/dashboard", icon: "dashboard" },
+  { label: "Dashboard", href: "/home", icon: "dashboard" },
   { label: "Project", href: "/projects", icon: "project" },
   { label: "Sprint", href: "/sprints", icon: "sprint", active: true },
   { label: "Tasks", href: "/tasks", icon: "tasks" },
