@@ -22,7 +22,7 @@ type AISidebarProps = {
 };
 
 const navItems = [
-  { label: "Dashboard", href: "/dashboard", icon: "dashboard", active: false },
+  { label: "Dashboard", href: "/home", icon: "dashboard", active: false },
   { label: "Project", href: "/projects", icon: "project", active: false },
   { label: "Sprint", href: "/sprints", icon: "sprint", active: false },
   { label: "Tasks", href: "/tasks", icon: "tasks", active: false },

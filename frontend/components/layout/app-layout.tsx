@@ -57,7 +57,7 @@ export function AppLayout({ children, title, breadcrumbs, searchPlaceholder }: A
   }, [user]);
 
   const navigationItems = [
-    { label: "Dashboard", href: "/dashboard", icon: DashboardGlyph },
+    { label: "Dashboard", href: "/home", icon: DashboardGlyph },
     { label: "Project", href: "/projects", icon: ProjectGlyph },
     { label: "Sprint", href: "/sprints", icon: SprintGlyph },
     { label: "Tasks", href: "/tasks", icon: TasksGlyph },

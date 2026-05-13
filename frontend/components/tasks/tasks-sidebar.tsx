@@ -29,7 +29,7 @@ type NavItem = {
 };
 
 const navigationItems: NavItem[] = [
-  { label: "Dashboard", href: "/dashboard", icon: DashboardGlyph },
+  { label: "Dashboard", href: "/home", icon: DashboardGlyph },
   { label: "Project", href: "/projects", icon: ProjectGlyph },
   { label: "Sprint", href: "/sprints", icon: SprintGlyph },
   { label: "Tasks", href: "/tasks", icon: TasksGlyph, active: true },

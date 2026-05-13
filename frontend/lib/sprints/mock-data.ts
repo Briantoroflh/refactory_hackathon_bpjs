@@ -85,7 +85,7 @@ export const sprintBoardMockData: SprintBoardData = {
     },
   ],
   sidebarItems: [
-    { label: "Dashboard", href: "/dashboard", icon: "dashboard" },
+    { label: "Dashboard", href: "/home", icon: "dashboard" },
     { label: "Project", href: "/projects", icon: "project" },
     { label: "Sprint", href: "/sprints", icon: "sprint", active: true },
     { label: "Tasks", href: "/tasks", icon: "tasks" },

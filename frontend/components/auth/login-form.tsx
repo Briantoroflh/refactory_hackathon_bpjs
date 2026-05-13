@@ -53,7 +53,7 @@ export function LoginForm() {
       // Store token if needed (though usually handled in api.ts or middleware)
       // Redirect to dashboard on success
       setTimeout(() => {
-        router.push("/dashboard");
+        router.push("/home");
       }, 1000);
     } catch (error) {
       const message = error instanceof Error ? error.message : "Unable to sign in.";
