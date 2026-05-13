@@ -8,6 +8,7 @@ import TasksLoading from "./loading";
 
 export default function Page() {
   const [tasks, setTasks] = useState<SprintTasks | null>(null);
+  const [projectId, setProjectId] = useState<number>(3);
   const [notice, setNotice] = useState<string | null>(null);
 
   useEffect(() => {
@@ -18,6 +19,7 @@ export default function Page() {
         const snapshot = await fetchTaskBoardSnapshot();
         if (!active) return;
         setTasks(snapshot.board);
+        setProjectId(snapshot.projectId);
         setNotice(snapshot.notice ?? null);
       } catch (err) {
         if (!active) return;
@@ -39,5 +41,5 @@ export default function Page() {
     return <TasksLoading />;
   }
 
-  return <TasksPage tasks={tasks} notice={notice} />;
+  return <TasksPage tasks={tasks} projectId={projectId} notice={notice} />;
 }

@@ -3,7 +3,10 @@ import { fetchProjectsPageData } from "@/lib/projects/api";
 import type { SprintBoardData } from "@/lib/sprints/types";
 import type { SprintTasks, TaskCard, TaskColumn } from "./types";
 
-const statusColumns: Array<{ id: string; title: string; order: string[] }> = [
+const PROJECT_ID = 3;
+type BoardStatus = "todo" | "in_progress" | "review" | "done";
+
+const statusColumns: Array<{ id: string; title: string; order: BoardStatus[] }> = [
   { id: "todo", title: "To Do", order: ["todo"] },
   { id: "in_progress", title: "In Progress", order: ["in_progress"] },
   { id: "review", title: "Review", order: ["review"] },
@@ -68,7 +71,7 @@ function normalizePriority(priority: unknown): "low" | "medium" | "high" {
   return "medium";
 }
 
-function backendStatusToColumn(status: string): string {
+function backendStatusToColumn(status: string): BoardStatus {
   const mapping: Record<string, string> = {
     backlog: "todo",
     in_progress: "in_progress",
@@ -77,10 +80,13 @@ function backendStatusToColumn(status: string): string {
     closed: "done",
   };
 
-  return mapping[status] ?? "todo";
+  return (mapping[status] ?? "todo") as BoardStatus;
 }
 
-function mapTask(task: Record<string, unknown>, memberMap: Map<string, SprintBoardData["members"][number]>): TaskCard & { status: string } {
+function mapTask(
+  task: Record<string, unknown>,
+  memberMap: Map<string, SprintBoardData["members"][number]>,
+): TaskCard & { status: BoardStatus } {
   const assigneeId = task.assigned_to ?? task.assignedTo ?? null;
   const assignee = assigneeId ? memberMap.get(String(assigneeId)) : undefined;
 
@@ -97,11 +103,12 @@ function mapTask(task: Record<string, unknown>, memberMap: Map<string, SprintBoa
         }
       : undefined,
     dueDate: String(task.deadline ?? ""),
-    status: backendStatusToColumn(String(task.status ?? "backlog")),
+    status: backendStatusToColumn(String(task.status ?? "backlog")) as BoardStatus,
+    version: Number(task.version ?? 1),
   };
 }
 
-function buildColumns(tasks: Array<TaskCard & { status: string }>): TaskColumn[] {
+function buildColumns(tasks: Array<TaskCard & { status: BoardStatus }>): TaskColumn[] {
   return statusColumns
     .map((column) => {
       const cards = tasks.filter((task) => column.order.includes(task.status));
@@ -109,10 +116,9 @@ function buildColumns(tasks: Array<TaskCard & { status: string }>): TaskColumn[]
         id: column.id,
         title: column.title,
         count: cards.length,
-        cards: cards.map(({ status: _status, ...card }) => card),
+        cards,
       };
-    })
-    .filter((column) => column.count > 0 || column.id !== "done");
+    });
 }
 
 function parseSprintNumber(title: string): number | undefined {
@@ -137,6 +143,7 @@ export function createEmptyTaskBoard(): SprintTasks {
 
 export async function fetchTaskBoardSnapshot(): Promise<{
   board: SprintTasks;
+  projectId: number;
   notice?: string;
 }> {
   const projectsData = await fetchProjectsPageData();
@@ -145,6 +152,7 @@ export async function fetchTaskBoardSnapshot(): Promise<{
   if (!Number.isFinite(projectId)) {
     return {
       board: createEmptyTaskBoard(),
+      projectId: PROJECT_ID,
       notice: "No live projects available yet.",
     };
   }
@@ -194,6 +202,28 @@ export async function fetchTaskBoardSnapshot(): Promise<{
       columns: buildColumns(mappedTasks),
       generatedAt: sprintOverview?.generatedAt,
     },
+    projectId,
     notice: notices.length ? notices[0] : undefined,
   };
+}
+
+export async function updateTaskStatus(
+  taskId: string,
+  status: BoardStatus,
+  version: number,
+  projectId = PROJECT_ID,
+) {
+  const backendStatus =
+    status === "todo"
+      ? "backlog"
+      : status === "in_progress"
+        ? "in_progress"
+        : status === "review"
+          ? "in_review"
+          : "completed";
+
+  return apiClient.patch(`/projects/${projectId}/tasks/${taskId}/status`, {
+    status: backendStatus,
+    version,
+  });
 }

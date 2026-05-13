@@ -40,6 +40,13 @@ class Settings:
         self.DEBUG = os.getenv("DEBUG", "False").lower() == "true"
         self.API_TITLE = "SprintFlow API"
         self.API_VERSION = "0.1.0"
+        frontend_url = os.getenv("FRONTEND_URL", "http://localhost:3000")
+        extra_cors_origins = os.getenv("CORS_ORIGINS", "")
+        self.CORS_ORIGINS = [
+            origin.strip()
+            for origin in ([frontend_url] + extra_cors_origins.split(","))
+            if origin and origin.strip()
+        ]
 
         # OpenRouter AI assistant
         self.OPENROUTER_ENABLED = os.getenv("OPENROUTER_ENABLED", "False").lower() == "true"

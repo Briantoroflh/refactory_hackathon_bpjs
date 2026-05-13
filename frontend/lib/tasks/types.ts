@@ -4,6 +4,8 @@ export interface TaskCard {
   description: string;
   label: string;
   priority: "low" | "medium" | "high";
+  status?: "todo" | "in_progress" | "review" | "done";
+  version?: number;
   assignee?: {
     name: string;
     avatar: string;
