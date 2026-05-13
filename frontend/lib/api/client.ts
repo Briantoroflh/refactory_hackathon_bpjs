@@ -8,6 +8,18 @@ type ApiEnvelope<T> = {
   data: T;
 };
 
+export class ApiClientError extends Error {
+  status: number;
+  details: unknown;
+
+  constructor(message: string, status: number, details?: unknown) {
+    super(message);
+    this.name = "ApiClientError";
+    this.status = status;
+    this.details = details ?? null;
+  }
+}
+
 function unwrapEnvelope<T>(payload: unknown): T {
   if (
     typeof payload === "object" &&
@@ -59,7 +71,11 @@ export const apiClient = {
 
     if (!response.ok) {
       const error = await response.json().catch(() => ({}));
-      throw new Error(error.message || error.detail || `API error: ${response.status}`);
+      throw new ApiClientError(
+        error.message || error.detail || `API error: ${response.status}`,
+        response.status,
+        error,
+      );
     }
 
     // Handle 204 No Content
@@ -156,7 +172,7 @@ export const aiAssistantAPI = {
     apiClient.post("/ai-assistant/standup-recap", data),
   taskRecommendation: (data: any) =>
     apiClient.post("/ai-assistant/task-recommendation", data),
-  jobStatus: (jobId: string) => apiClient.get(`/ai-assistant/job/${jobId}`),
+  jobStatus: (jobId: string) => apiClient.get(`/ai-assistant/jobs/${jobId}`),
 };
 
 // Workers API

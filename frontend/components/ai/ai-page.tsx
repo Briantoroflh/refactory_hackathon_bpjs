@@ -4,9 +4,11 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AppLayout } from "@/components/layout/app-layout";
 import { AIContextPanel } from "./ai-context-panel";
 import { AIChatPanel } from "./ai-chat-panel";
-import { fetchAILiveSnapshot, sendAIMessage } from "@/lib/ai/api";
+import { fetchAILiveSnapshot, getAIActionHint, mapAIError, sendAIMessage, validateAIPrompt } from "@/lib/ai/api";
 import type { AIMessage, AILiveSnapshot } from "@/lib/ai/types";
 import { AIPageSkeleton } from "@/components/ai/ai-skeleton";
+
+const AI_RELIABILITY_GUARD_ENABLED = process.env.NEXT_PUBLIC_AI_RELIABILITY_GUARD !== "off";
 
 export function AIPage() {
   const [snapshot, setSnapshot] = useState<AILiveSnapshot | null>(null);
@@ -14,6 +16,7 @@ export function AIPage() {
   const [inputValue, setInputValue] = useState("");
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
+  const [requestState, setRequestState] = useState<"idle" | "loading" | "success" | "error">("idle");
   const [notice, setNotice] = useState<string | null>(null);
   const chatEndRef = useRef<HTMLDivElement>(null);
   const hasUserMessagedRef = useRef(false);
@@ -88,10 +91,21 @@ export function AIPage() {
   );
 
   const handleSendMessage = useCallback(async () => {
-    const prompt = inputValue.trim();
-    if (!prompt || sending) {
+    if (sending) {
       return;
     }
+
+    const validation = AI_RELIABILITY_GUARD_ENABLED
+      ? validateAIPrompt(inputValue)
+      : { ok: true as const, prompt: inputValue.trim() };
+
+    if (!validation.ok) {
+      setRequestState("error");
+      setNotice(validation.message);
+      return;
+    }
+
+    const prompt = validation.prompt;
 
     const userMessage: AIMessage = {
       id: `msg-${Date.now()}`,
@@ -103,6 +117,8 @@ export function AIPage() {
     setMessages((prev) => [...prev, userMessage]);
     setInputValue("");
     setSending(true);
+    setRequestState("loading");
+    setNotice(null);
 
     try {
       const response = await sendAIMessage(prompt, liveContext);
@@ -115,18 +131,21 @@ export function AIPage() {
           codeSnippet: response.codeSnippet,
         },
       ]);
+      setRequestState("success");
     } catch (error) {
+      const mapped = mapAIError(error);
+      const hint = getAIActionHint(mapped.status);
+      const content = `${mapped.message} ${hint}`.trim();
+      setNotice(content);
       setMessages((prev) => [
         ...prev,
         {
           id: `msg-${Date.now()}-error`,
           type: "ai",
-          content:
-            error instanceof Error
-              ? error.message
-              : "AI assistant request failed.",
+          content,
         },
       ]);
+      setRequestState("error");
     } finally {
       setSending(false);
     }
@@ -143,6 +162,11 @@ export function AIPage() {
           {notice ? (
             <div className="border-b border-amber-200 bg-amber-50 px-5 py-3 text-[14px] font-medium text-amber-800">
               {notice}
+            </div>
+          ) : null}
+          {requestState === "success" ? (
+            <div className="border-b border-emerald-200 bg-emerald-50 px-5 py-2 text-[12px] font-medium text-emerald-700">
+              AI response berhasil dimuat.
             </div>
           ) : null}
           <AIChatPanel

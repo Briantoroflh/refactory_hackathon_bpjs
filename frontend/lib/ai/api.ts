@@ -1,8 +1,12 @@
-import { apiClient } from "@/lib/api/client";
+import { ApiClientError, apiClient } from "@/lib/api/client";
 import { fetchProjectsPageData } from "@/lib/projects/api";
 import type { TeamAnalytics } from "@/lib/analytics/types";
 import type { SprintBoardData } from "@/lib/sprints/types";
 import type { AIDocument, AIContextItem, AIMessage, AILiveSnapshot, CodeSnippet } from "./types";
+
+const AI_REQUEST_TIMEOUT_MS = 20000;
+const AI_MAX_RETRIES = 1;
+export const AI_MAX_PROMPT_LENGTH = 2000;
 
 type AIWorkflowKey =
   | "planning"
@@ -23,6 +27,155 @@ type AIWorkflowResult = {
   structured_output?: Record<string, unknown> | null;
   source?: string;
 };
+
+export class AIAssistantError extends Error {
+  status: number | null;
+  retryable: boolean;
+  code: string;
+
+  constructor(message: string, status: number | null, retryable: boolean, code: string) {
+    super(message);
+    this.name = "AIAssistantError";
+    this.status = status;
+    this.retryable = retryable;
+    this.code = code;
+  }
+}
+
+type AIErrorShape = {
+  message: string;
+  status: number | null;
+  retryable: boolean;
+  code: string;
+};
+
+function maskPrompt(prompt: string): string {
+  const compact = prompt.replace(/\s+/g, " ").trim();
+  if (!compact) {
+    return "[empty]";
+  }
+  const preview = compact.slice(0, 24);
+  return `${preview}${compact.length > 24 ? "..." : ""} (len:${compact.length})`;
+}
+
+function emitAIEvent(event: string, meta: Record<string, unknown>): void {
+  // Keep telemetry lightweight and sanitized (no raw prompt content).
+  if (typeof window !== "undefined") {
+    console.info("[ai-telemetry]", event, meta);
+  }
+}
+
+export function validateAIPrompt(input: string): { ok: true; prompt: string } | { ok: false; message: string } {
+  const prompt = input.trim();
+  if (!prompt) {
+    return { ok: false, message: "Prompt tidak boleh kosong." };
+  }
+  if (prompt.length > AI_MAX_PROMPT_LENGTH) {
+    return {
+      ok: false,
+      message: `Prompt terlalu panjang. Maksimal ${AI_MAX_PROMPT_LENGTH} karakter.`,
+    };
+  }
+  return { ok: true, prompt };
+}
+
+export function normalizeAIResponse(response: Partial<AIWorkflowResult> | null | undefined): AIWorkflowResult {
+  return {
+    workflow: response?.workflow || "unknown",
+    status: response?.status || "completed",
+    model: response?.model || "unknown",
+    content: response?.content || "Saya belum mendapatkan output yang bisa ditampilkan.",
+    structured_output: response?.structured_output ?? null,
+    source: response?.source || "openrouter",
+  };
+}
+
+export function getAIActionHint(status: number | null): string {
+  if (status === 401) {
+    return "Silakan login ulang untuk melanjutkan.";
+  }
+  if (status === 422) {
+    return "Periksa prompt lalu kirim ulang.";
+  }
+  if (status === 408 || status === 429 || (status !== null && status >= 500)) {
+    return "Layanan AI sedang sibuk, coba lagi dalam beberapa detik.";
+  }
+  return "Silakan coba lagi.";
+}
+
+function isTransientStatus(status: number | null): boolean {
+  return status === 408 || status === 429 || (status !== null && status >= 500);
+}
+
+export function mapAIError(error: unknown): AIErrorShape {
+  if (error instanceof AIAssistantError) {
+    return {
+      message: error.message,
+      status: error.status,
+      retryable: error.retryable,
+      code: error.code,
+    };
+  }
+
+  if (error instanceof ApiClientError) {
+    const status = error.status ?? null;
+    if (status === 401) {
+      return {
+        message: "Sesi login Anda berakhir. Silakan login ulang lalu coba lagi.",
+        status,
+        retryable: false,
+        code: "AUTH_REQUIRED",
+      };
+    }
+    if (status === 422) {
+      return {
+        message: "Permintaan AI tidak valid. Periksa input lalu coba lagi.",
+        status,
+        retryable: false,
+        code: "VALIDATION_FAILED",
+      };
+    }
+    if (isTransientStatus(status)) {
+      return {
+        message: "Layanan AI sedang sibuk. Silakan coba beberapa saat lagi.",
+        status,
+        retryable: true,
+        code: "TRANSIENT_FAILURE",
+      };
+    }
+    return {
+      message: error.message || "Terjadi gangguan saat memproses AI assistant.",
+      status,
+      retryable: false,
+      code: "UNKNOWN_API_ERROR",
+    };
+  }
+
+  if (error instanceof Error && error.name === "AbortError") {
+    return {
+      message: "Permintaan AI timeout. Silakan coba lagi.",
+      status: 408,
+      retryable: true,
+      code: "REQUEST_TIMEOUT",
+    };
+  }
+
+  if (error instanceof Error) {
+    return {
+      message: error.message || "Terjadi kesalahan tak terduga pada AI assistant.",
+      status: null,
+      retryable: true,
+      code: "NETWORK_OR_UNKNOWN",
+    };
+  }
+
+  return {
+    message: "Terjadi kesalahan tak terduga pada AI assistant.",
+    status: null,
+    retryable: true,
+    code: "UNKNOWN",
+  };
+}
 
 function createEmptySnapshot(): AILiveSnapshot {
   return {
@@ -221,21 +374,87 @@ export async function sendAIMessage(
   prompt: string,
   context: Record<string, unknown>,
 ): Promise<{ content: string; codeSnippet?: CodeSnippet }> {
-  const workflow = selectWorkflow(prompt);
-  const response = await apiClient.post<AIWorkflowResult>(`/ai-assistant/${workflow}`, {
-    prompt,
-    context,
-    async_mode: false,
+  const validation = validateAIPrompt(prompt);
+  if (!validation.ok) {
+    throw new AIAssistantError(validation.message, 422, false, "CLIENT_VALIDATION");
+  }
+
+  const cleanPrompt = validation.prompt;
+  const workflow = selectWorkflow(cleanPrompt);
+  emitAIEvent("request.submit", {
+    workflow,
+    prompt: maskPrompt(cleanPrompt),
+    hasContext: Object.keys(context ?? {}).length > 0,
   });
 
-  return {
-    content: response.content || "Saya belum mendapatkan output yang bisa ditampilkan.",
-    codeSnippet:
-      response.structured_output && Object.keys(response.structured_output).length
-        ? {
-            code: JSON.stringify(response.structured_output, null, 2),
-            language: "json",
-          }
-        : undefined,
-  };
+  for (let attempt = 0; attempt <= AI_MAX_RETRIES; attempt += 1) {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), AI_REQUEST_TIMEOUT_MS);
+
+    try {
+      const raw = await apiClient.post<AIWorkflowResult>(
+        `/ai-assistant/${workflow}`,
+        {
+          prompt: cleanPrompt,
+          context: context ?? {},
+          async_mode: false,
+        },
+        { signal: controller.signal },
+      );
+
+      const response = normalizeAIResponse(raw);
+      emitAIEvent("request.success", {
+        workflow,
+        attempt: attempt + 1,
+        status: response.status,
+      });
+
+      return {
+        content: response.content,
+        codeSnippet:
+          response.structured_output && Object.keys(response.structured_output).length
+            ? {
+                code: JSON.stringify(response.structured_output, null, 2),
+                language: "json",
+              }
+            : undefined,
+      };
+    } catch (error) {
+      const mapped = mapAIError(error);
+      const shouldRetry = mapped.retryable && attempt < AI_MAX_RETRIES;
+
+      if (shouldRetry) {
+        emitAIEvent("request.retry", {
+          workflow,
+          attempt: attempt + 1,
+          status: mapped.status,
+          code: mapped.code,
+        });
+        continue;
+      }
+
+      emitAIEvent("request.fail", {
+        workflow,
+        attempt: attempt + 1,
+        status: mapped.status,
+        code: mapped.code,
+      });
+
+      throw new AIAssistantError(
+        mapped.message,
+        mapped.status,
+        mapped.retryable,
+        mapped.code,
+      );
+    } finally {
+      clearTimeout(timeout);
+    }
+  }
+
+  throw new AIAssistantError(
+    "Layanan AI sedang sibuk. Silakan coba beberapa saat lagi.",
+    503,
+    true,
+    "RETRY_EXHAUSTED",
+  );
 }
