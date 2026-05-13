@@ -45,10 +45,14 @@ def create_app() -> FastAPI:
         debug=settings.DEBUG,
     )
 
+    # Allow local frontend origins with dynamic ports during development.
+    local_origin_regex = r"https?://(localhost|127\.0\.0\.1)(:\d+)?$"
+
     # Add CORS middleware
     app.add_middleware(
         CORSMiddleware,
         allow_origins=settings.CORS_ORIGINS or ["http://localhost:3000", "http://127.0.0.1:3000", "http://localhost:3001", "http://127.0.0.1:3001"],
+        allow_origin_regex=local_origin_regex,
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],
